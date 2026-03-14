@@ -9,19 +9,19 @@ library(ggplot2)
 library(dplyr)
 library(minpack.lm) # for nlsLM
 
-#code for font needed
-library(showtext) 
-font_add("Times New Roman", regular = "times.ttf")
-showtext_opts(dpi = 300)
-showtext_auto()
+library(showtext)
 
-# set up input dictory as: 
-setwd("C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/data")
+# ── Shared helpers ─────────────────────────────────────────────
+.root <- if (file.exists("R/paths.R")) "." else ".."
+source(file.path(.root, "R/paths.R"))
+source(file.path(.root, "R/theme_pub.R"))
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
 #----dataa selction----
 
 # CP data
-df <- read.csv("full_data_cp_experiment.csv")
+df <- read.csv(data_path("full_data_cp_experiment.csv"))
 
 
 # we will remove range = 0 because it's undifeined in the function
@@ -128,8 +128,8 @@ data_params2 <- data_predictions |>
   left_join(data_params, by = join_by(ExperimentName, Subject,Group,Regression))
 
 #*add Group*
- write.csv(data_predictions, "full_data_with_predictions_asd_experiment.csv")
- write.csv(data_params2, "full_results_asd_experiment.csv")
+ write.csv(data_predictions, output_path("weibull_trial_predictions.csv"))
+ write.csv(data_params2, output_path("weibull_metric_results.csv"))
 ```
 
 # -----------------------------
@@ -162,14 +162,12 @@ p <- ggplot(data_predictions, aes(x = Range)) +
   labels = c(biasp = "Bias+", biasm = "Bias-")
     )
 
-ggsave(filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/Weibull_all_groups_cp_experiment2.png",
+ggsave(filename = plot_path("Weibull_all_groups_cp_experiment2.png"),
        plot  = p,
        width = 8, height = 6, dpi = 300)
 ```
 
 ```{r}
-output_dir <- "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots"
-
 subjects <- unique(data_predictions$Subject)
 
 for (subj in subjects) {
@@ -211,8 +209,7 @@ for (subj in subjects) {
   
   # c) Save it
   ggsave(
-    filename = file.path(output_dir,
-                         paste0("Subject_", subj, ".png")),
+    filename = plot_path(paste0("Subject_", subj, ".png")),
     plot   = p_subj,
     width  = 4, height = 6, dpi = 300
   )
@@ -222,7 +219,7 @@ for (subj in subjects) {
 
 # Weibull for Ilustration
 ```{r}
-output_dir <- "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/illustration"
+dir.create(plot_path("illustration"), recursive = TRUE, showWarnings = FALSE)
 
 library(dplyr)
 library(ggplot2)
@@ -257,7 +254,7 @@ for (g in unique_groups) {
       ) +
       theme_pub()
 
-   filename <- file.path(output_dir, paste0("illustration_option_", g, "_", e, ".png"))
+   filename <- plot_path("illustration", paste0("illustration_option_", g, "_", e, ".png"))
     ggsave(filename,
            plot = p, 
            width = 4,
@@ -305,7 +302,7 @@ p <- ggplot(data_predictions, aes(x = Range)) +
     labels = c(Caucasian = "Own-Race", Asian = "Other-Race")
   )
 
-ggsave(filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/Weibull_by_bias.png",
+ggsave(filename = plot_path("Weibull_by_bias.png"),
   plot = p,
   width = 8, height = 6, dpi = 300
 )

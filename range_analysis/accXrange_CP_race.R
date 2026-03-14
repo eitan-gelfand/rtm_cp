@@ -6,14 +6,17 @@ library(dplyr)
 library(showtext)
 library(scales)
 
-font_add("Times New Roman", regular = "times.ttf")
-showtext_opts(dpi = 300)
-showtext_auto()
+# ── Shared helpers ─────────────────────────────────────────────
+.root <- if (file.exists("R/paths.R")) "." else ".."
+source(file.path(.root, "R/paths.R"))
+source(file.path(.root, "R/theme_pub.R"))
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
 # 1) Load & summarize
 # ──────────────────────────────────────────────────────────────
-df_summary <- read.csv("C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/data/full_data_cp_experiment.csv") %>%
+df_summary <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
   filter(Range != 0) %>%
   group_by(Subject, ExperimentName, Range, Regression, Group) %>%
   summarize(mean_ACC = mean(ACC, na.rm = TRUE), .groups = "drop") %>%
@@ -79,6 +82,6 @@ p_all <- ggplot() +
 # 4) Save
 # ──────────────────────────────────────────────────────────────
 ggsave(
-  filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/acc_range_CP_race.png",
+  filename = plot_path("acc_range_CP_race.png"),
   plot = p_all, width = 8, height = 6, dpi = 300
 )

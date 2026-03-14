@@ -9,14 +9,17 @@ library(tibble)
 library(showtext)
 library(scales)
 
-font_add("Times New Roman", regular = "times.ttf") 
-showtext_opts(dpi = 300)
-showtext_auto()
+# ── Shared helpers ─────────────────────────────────────────────
+.root <- if (file.exists("R/paths.R")) "." else ".."
+source(file.path(.root, "R/paths.R"))
+source(file.path(.root, "R/theme_pub.R"))
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
 # 1) Load CP Dprime dataset
 # ──────────────────────────────────────────────────────────────
-df <- read.csv("C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/data/full_data_cp_experiment.csv") %>%
+df <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
   
 # ──────────────────────────────────────────────────────────────
 # 2) Aggregate over Range (since histogram uses subject-level)
@@ -83,16 +86,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
     labels = c("biasp" = "Bias+", "biasm" = "Bias-")
   ) +
   scale_y_continuous(labels = number_format(accuracy = 0.01)) +
-  theme_bw(base_family = "Times New Roman") +
-  theme(
-    axis.text        = element_text(size = 12),
-    axis.title       = element_text(size = 14),
-    strip.text       = element_text(size = 14),
-    legend.text      = element_text(size = 12),
-    legend.title     = element_text(size = 14),
-    panel.grid       = element_blank(),
-    legend.position  = "bottom"
-  )
+  theme_pub()
 
 # ──────────────────────────────────────────────────────────────
 # 5) Bias+ vs Bias– (paired test)
@@ -157,7 +151,7 @@ final_plot_cp <- p_cp +
 # 8) Save
 # ──────────────────────────────────────────────────────────────
 ggsave(
-  "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/dprime_histogram.png",
+  plot_path("dprime_histogram.png"),
   final_plot_cp,
   width = 8,
   height = 6,

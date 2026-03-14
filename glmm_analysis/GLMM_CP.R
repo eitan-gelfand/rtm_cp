@@ -10,14 +10,15 @@ library(ggplot2)
 library(broom.mixed)
 library(sjPlot)
 
-font_add("Times New Roman", regular = "times.ttf")
-showtext_opts(dpi = 300)
-showtext_auto()
-
-
+# ── Shared helpers ─────────────────────────────────────────────
+.root <- if (file.exists("R/paths.R")) "." else ".."
+source(file.path(.root, "R/paths.R"))
+source(file.path(.root, "R/theme_pub.R"))
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
 # 1. Read & preprocess
-df <- read.csv("C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/data/full_data_cp_experiment.csv") %>%
+df <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
   filter(Range != 0)
 
 
@@ -119,7 +120,7 @@ final_plot <- p +
 # Save plot
 # ──────────────────────────────────────────────
 ggsave(
-  filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/glmm_cp_.png",
+  filename = plot_path("glmm_cp_.png"),
   plot = final_plot,
   width = 8,
   height = 6,
@@ -274,7 +275,7 @@ print(head(loso_results, 10))   # quick peek
 print(loso_results)             # full per-subject table with Group
 
 # ---- save to CSV ----
-out_path <- "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/GLMM_LOSO_results.csv"
+out_path <- output_path("GLMM_LOSO_results.csv")
 write.csv(loso_results, out_path, row.names = FALSE)
 cat("\nSaved per-subject metrics with Group to:\n", out_path, "\n")
 
