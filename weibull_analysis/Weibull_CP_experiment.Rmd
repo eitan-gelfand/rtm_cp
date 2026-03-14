@@ -1,0 +1,318 @@
+---
+title: "Psychometric Curve Fitting"
+output: html_document
+---
+# Setup
+```{r setup, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(minpack.lm) # for nlsLM
+
+#code for font needed
+library(showtext) 
+font_add("Times New Roman", regular = "times.ttf")
+showtext_opts(dpi = 300)
+showtext_auto()
+
+# set up input dictory as: 
+setwd("C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/data")
+
+#----dataa selction----
+
+# CP data
+df <- read.csv("full_data_cp_experiment.csv")
+
+
+# we will remove range = 0 because it's undifeined in the function
+data <- filter(df, Range != 0, !Subject %in% c(829))
+data$ACC <- pmin(pmax(data$ACC, 1e-4), 1 - 1e-4)
+
+fit_curve <- function(.data) {
+  nlsLM(
+    ACC ~ 1 - exp(-(Range / lambda)^k),
+    data    = .data,
+    start   = list(lambda = 20, k = 1.0),
+    lower   = c(lambda = 1e-5, k = 1e-5),
+    control = nls.lm.control(
+      maxiter = 500  # Increase iterations if needed
+    )
+  )
+}
+
+
+extract_estimates <- function(model) {
+
+  pars    <- coef(model)
+  lambda  <- pars["lambda"]
+  k       <- pars["k"]
+
+  j25 <- lambda * (-log(1 - 0.25))^(1 / k)
+  j50 <- lambda * (-log(1 - 0.50))^(1 / k)
+  j75 <- lambda * (-log(1 - 0.75))^(1 / k)
+  JND <- (j75 - j25) / 2
+  PSE <- j50
+  slope <- (k / (4 * lambda)) * (log(4))^((k - 1) / k)
+
+  # 5) Return all in a tidy data frame (or tibble)
+  tibble::tibble(
+    lambda = lambda,
+    k      = k,
+    j25    = j25,
+    j75    = j75,
+    JND    = JND,
+    PSE    = PSE,
+    slope = slope
+  )
+}
+
+add_predictions <- function(model, grid) {
+  # This function returns predictions for grid according to the model
+  grid$Y_hat <- predict(model, newdata = grid)
+  grid
+}
+
+
+```
+# Fit
+```{r data}
+# For each Subject / task, fit a logistic curve (*add Group*)
+data_fits <- data |> 
+  group_by(ExperimentName, Subject,Group,Regression) |> 
+  summarise(
+    FIT = list(fit_curve(.data = pick(everything())))
+  ) |> 
+  ungroup()
+
+# For each Subject / task, extract the psychometric curve indices 
+data_params <- data_fits |> 
+  mutate(
+    map(FIT, extract_estimates) |> bind_rows()
+  ) |> 
+  select(-FIT)
+```
+
+Add predictions:
+
+```{r warning=FALSE}
+grid <- data.frame(Range = c(15, 21, 27, 33, 39, 45))
+
+# Make predictions
+data_predictions <- data_fits |> 
+  #add *Group*
+  group_by(ExperimentName,Subject,Group,Regression) |> 
+  reframe(
+    add_predictions(FIT[[1]], grid))|> 
+  ungroup() |> 
+  left_join(data, by = c("ExperimentName", "Subject", "Range","Group","Regression"))%>%
+  # enforce the exact Group and Race order for plots:
+  mutate(
+    Group = factor(Group,levels = c( "TD","CP")),
+    ExperimentName = factor(ExperimentName, levels = c("Caucasian", "Asian"))
+  )
+# *add Group*
+```
+
+# Save results
+
+Add R2
+
+```{r}
+data_params2 <- data_predictions |> 
+  group_by(ExperimentName, Subject,Group,Regression) |>
+  
+  summarise(
+    Rsq = cor(ACC, Y_hat) ^ 2
+  ) |> 
+  ungroup() |> 
+  left_join(data_params, by = join_by(ExperimentName, Subject,Group,Regression))
+
+#*add Group*
+ write.csv(data_predictions, "full_data_with_predictions_asd_experiment.csv")
+ write.csv(data_params2, "full_results_asd_experiment.csv")
+```
+
+# -----------------------------
+# Weibull plots
+# -----------------------------
+
+
+
+# weibull per group per experiment hue regression levels 
+```{r}
+
+p <- ggplot(data_predictions, aes(x = Range)) +
+  facet_grid(rows = vars(Group), 
+             cols = vars(ExperimentName),
+             labeller = labeller(
+               ExperimentName = c("Asian" = "Other-Race", "Caucasian" = "Own-Race")
+             )
+             ) +
+  stat_summary(aes(y = Y_hat, colour = Regression),
+               geom = "line", linewidth = 1.2) +
+  geom_hline(yintercept = 0.5,linetype = "dashed", linewidth = 0.5, alpha = 0.5) +
+  scale_x_continuous(limits = c(15, 45),
+                     breaks = c(15, 21, 27, 33, 39, 45)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(y = "Accuracy",
+       x = "Difference in morph levels") +
+    theme_pub() +
+  scale_colour_manual(
+  values = c(biasp = "#7FB3D5", biasm = "#F08080"),
+  labels = c(biasp = "Bias+", biasm = "Bias-")
+    )
+
+ggsave(filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/Weibull_all_groups_cp_experiment2.png",
+       plot  = p,
+       width = 8, height = 6, dpi = 300)
+```
+
+```{r}
+output_dir <- "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots"
+
+subjects <- unique(data_predictions$Subject)
+
+for (subj in subjects) {
+  
+  # a) Filter to just this subject
+  dp_subj <- data_predictions %>%
+    filter(Subject == subj)
+  
+  # b) Build the exact same plot, but on dp_subj
+  p_subj <- ggplot(dp_subj, aes(x = Range)) +
+    facet_grid(
+      rows = vars(ExperimentName),
+      cols = vars(Group),
+      labeller = labeller(
+        ExperimentName = c("Asian" = "Other-Race",
+                           "Caucasian" = "Own-Race")
+      )
+    ) +
+    stat_summary(aes(y = Y_hat, colour = Regression),
+                 geom    = "line",
+                 linewidth = 1.2) +
+    geom_hline(yintercept = 0.5,
+               linetype   = "dashed",
+               linewidth  = 0.5,
+               alpha      = 0.5) +
+    scale_x_continuous(limits = c(15, 45),
+                       breaks = c(15, 21, 27, 33, 39, 45)) +
+    scale_y_continuous(limits = c(0, 1)) +
+    labs(
+      y = "Accuracy",
+      x = "Difference in morph levels",
+      title = paste("Subject", subj)    # optional: add subject ID to the plot
+    ) +
+    theme_pub() +
+    scale_colour_manual(
+      values = c(biasp = "#7FB3D5", biasm = "#F08080"),
+      labels = c(biasp = "Bias+", biasm = "Bias-")
+    )
+  
+  # c) Save it
+  ggsave(
+    filename = file.path(output_dir,
+                         paste0("Subject_", subj, ".png")),
+    plot   = p_subj,
+    width  = 4, height = 6, dpi = 300
+  )
+}
+```
+
+
+# Weibull for Ilustration
+```{r}
+output_dir <- "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/illustration"
+
+library(dplyr)
+library(ggplot2)
+
+unique_groups      <- unique(data_predictions$Group)
+unique_experiments <- unique(data_predictions$ExperimentName)
+
+for (g in unique_groups) {
+  for (e in unique_experiments) {
+
+    subset_df <- data_predictions %>%
+    filter(Group == g, ExperimentName == e)
+    if (nrow(subset_df) == 0) next
+
+    p <- ggplot(subset_df, aes(x = Range, y = Y_hat, color = Regression)) +
+      geom_line(aes(group = interaction(Subject, Regression)), alpha = 0.2) +
+      stat_summary(aes(group = Regression), fun = mean, geom = "line", linewidth = 1) +
+      geom_hline(yintercept = 0.5, linetype = "dashed", linewidth = 0.5) +
+      scale_x_continuous(limits = c(15, 45),
+                     breaks = c(15, 21, 27, 33, 39, 45)) +
+      scale_y_continuous(limits = c(0, 1)) +
+      coord_fixed(ratio = 50) +
+      scale_color_manual(
+        values = c(biasm = "#F08080", biasp = "#7FB3D5"),
+        labels = c(biasp = "Bias+", biasm = "Bias-"),
+        name   = "Regression"
+      ) +
+      labs(
+       # title = paste(g, "-", e),
+        x     = "Difference in morph levels",
+        y     = "Accuracy"
+      ) +
+      theme_pub()
+
+   filename <- file.path(output_dir, paste0("illustration_option_", g, "_", e, ".png"))
+    ggsave(filename,
+           plot = p, 
+           width = 4,
+           height = 4, 
+           dpi = 300
+           )
+    }
+  }
+```
+
+
+# Weibull by Race not Regression  
+```{r}
+
+data_predictions$Regression <- factor(
+  data_predictions$Regression,
+  levels = c("biasm", "biasp")  # Bias+ on top, Bias− on bottom
+)
+
+p <- ggplot(data_predictions, aes(x = Range)) +
+  facet_grid(
+    rows = vars(Group), 
+    cols = vars(Regression),
+    labeller = labeller(
+      Regression = c("biasm" = "Bias−", "biasp" = "Bias+")
+    )
+  ) +
+  stat_summary(
+    aes(y = Y_hat, colour = ExperimentName),
+    geom = "line", linewidth = 1.2
+  ) +
+  geom_hline(yintercept = 0.5, linetype = "dashed", linewidth = 0.5, alpha = 0.5) +
+  scale_x_continuous(
+    limits = c(15, 45),
+    breaks = c(15, 21, 27, 33, 39, 45)
+  ) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    y = "Accuracy",
+    x = "Difference in morph levels"
+  ) +
+  theme_pub() +
+  scale_colour_manual(
+    values = c("Caucasian" = "#A6D8C3", "Asian" = "#F6B48F"),
+    labels = c(Caucasian = "Own-Race", Asian = "Other-Race")
+  )
+
+ggsave(filename = "C:/Users/eitas/OneDrive/University/Semester D/Galia's Lab/R/CP_TD_experiment/CP_experiment_plots/Weibull_by_bias.png",
+  plot = p,
+  width = 8, height = 6, dpi = 300
+)
+
+
+
+```
+
+
+

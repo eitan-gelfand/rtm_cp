@@ -1,0 +1,48 @@
+# ---------------------------
+# OS / Editor junk
+# ---------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+
+# ---------------------------
+# R session artifacts
+# ---------------------------
+.Rhistory
+.RData
+.RDataTmp*
+.Rproj.user/
+*.Rproj
+
+# ---------------------------
+# Python (if mixed project)
+# ---------------------------
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ---------------------------
+# All data (strict mode)
+# ---------------------------
+data/
+Data/
+archive/
+*.csv
+*.xlsx
+*.xls
+*.rds
+*.RDS
+*.sav
+
+# ---------------------------
+# Outputs / generated files
+# ---------------------------
+output/
+plots/
+figures/
+results/
+*.png
+*.pdf
+*.html
+*.docx
