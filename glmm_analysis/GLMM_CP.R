@@ -18,7 +18,7 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # 1. Read & preprocess
-df <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
+df <- read.csv(data_path("full_data_cp.csv")) %>%
   filter(Range != 0)
 
 

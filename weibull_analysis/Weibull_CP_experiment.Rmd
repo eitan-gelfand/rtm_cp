@@ -21,7 +21,7 @@ setup_fonts()
 #----dataa selction----
 
 # CP data
-df <- read.csv(data_path("full_data_cp_experiment.csv"))
+df <- read.csv(data_path("full_data_cp.csv"))
 
 
 # we will remove range = 0 because it's undifeined in the function
@@ -128,8 +128,8 @@ data_params2 <- data_predictions |>
   left_join(data_params, by = join_by(ExperimentName, Subject,Group,Regression))
 
 #*add Group*
- write.csv(data_predictions, output_path("weibull_trial_predictions.csv"))
- write.csv(data_params2, output_path("weibull_metric_results.csv"))
+ write.csv(data_predictions, data_path("weibull_trial_predictions.csv"))
+ write.csv(data_params2, data_path("weibull_metric_results.csv"))
 ```
 
 # -----------------------------

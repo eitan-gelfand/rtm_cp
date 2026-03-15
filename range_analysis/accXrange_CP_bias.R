@@ -10,13 +10,13 @@ library(scales)
 .root <- if (file.exists("R/paths.R")) "." else ".."
 source(file.path(.root, "R/paths.R"))
 source(file.path(.root, "R/theme_pub.R"))
-#source(file.path(.root, "R/setup_fonts.R"))
-#setup_fonts()
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
 # 1) Load & summarize
 # ──────────────────────────────────────────────────────────────
-df_summary <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
+df_summary <- read.csv(data_path("full_data_cp.csv")) %>%
   filter(Range != 0) %>%
   group_by(Subject, ExperimentName, Range, Regression, Group) %>%
   summarize(mean_ACC = mean(ACC, na.rm = TRUE), .groups = "drop") %>%

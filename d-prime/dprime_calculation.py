@@ -13,7 +13,7 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 
-DEFAULT_DATA_FILE = "full_data_life_span.csv"
+DEFAULT_DATA_FILE = "full_data_cp.csv"
 
 
 def find_project_root(start: Path | None = None) -> Path:
@@ -457,3 +457,6 @@ def run_workflow(data_file: str = DEFAULT_DATA_FILE) -> dict[str, pd.DataFrame]:
 
 if __name__ == "__main__":
     run_workflow()
+
+
+

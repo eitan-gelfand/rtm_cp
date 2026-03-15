@@ -19,7 +19,7 @@ setup_fonts()
 # ──────────────────────────────────────────────────────────────
 # 1) Load CP Dprime dataset
 # ──────────────────────────────────────────────────────────────
-df <- read.csv(data_path("full_data_cp_experiment.csv")) %>%
+df <- read.csv(data_path("full_data_cp.csv")) %>%
   
 # ──────────────────────────────────────────────────────────────
 # 2) Aggregate over Range (since histogram uses subject-level)
