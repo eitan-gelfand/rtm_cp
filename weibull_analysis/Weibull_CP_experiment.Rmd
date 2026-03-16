@@ -9,6 +9,8 @@ library(ggplot2)
 library(dplyr)
 library(minpack.lm) # for nlsLM
 
+library(showtext)
+
 # ── Shared helpers ─────────────────────────────────────────────
 .root <- if (file.exists("R/paths.R")) "." else ".."
 source(file.path(.root, "R/paths.R"))
@@ -140,8 +142,8 @@ data_params2 <- data_predictions |>
 ```{r}
 
 p <- ggplot(data_predictions, aes(x = Range)) +
-  facet_grid(rows = vars(Group), 
-             cols = vars(ExperimentName),
+  facet_grid(rows = vars(ExperimentName), 
+             cols = vars(Group),
              labeller = labeller(
                ExperimentName = c("Asian" = "Other-Race", "Caucasian" = "Own-Race")
              )
@@ -160,10 +162,9 @@ p <- ggplot(data_predictions, aes(x = Range)) +
   labels = c(biasp = "Bias+", biasm = "Bias-")
     )
 
-ggsave(filename = plot_path("Weibull_all_groups_cp_experiment2.png"),
+ggsave(filename = plot_path("Weibull_groups_by_race.png"),
        plot  = p,
-  width = 8, height = 6, dpi = 300,
-  device = ragg::agg_png)
+       width = 8, height = 6, dpi = 300)
 ```
 
 ```{r}
@@ -210,8 +211,7 @@ for (subj in subjects) {
   ggsave(
     filename = plot_path(paste0("Subject_", subj, ".png")),
     plot   = p_subj,
-    width  = 4, height = 6, dpi = 300,
-    device = ragg::agg_png
+    width  = 4, height = 6, dpi = 300
   )
 }
 ```
@@ -259,8 +259,7 @@ for (g in unique_groups) {
            plot = p, 
            width = 4,
            height = 4, 
-          dpi = 300,
-          device = ragg::agg_png
+           dpi = 300
            )
     }
   }
@@ -277,8 +276,8 @@ data_predictions$Regression <- factor(
 
 p <- ggplot(data_predictions, aes(x = Range)) +
   facet_grid(
-    rows = vars(Group), 
-    cols = vars(Regression),
+    rows = vars(Regression), 
+    cols = vars(Group),
     labeller = labeller(
       Regression = c("biasm" = "Bias−", "biasp" = "Bias+")
     )
@@ -303,10 +302,9 @@ p <- ggplot(data_predictions, aes(x = Range)) +
     labels = c(Caucasian = "Own-Race", Asian = "Other-Race")
   )
 
-ggsave(filename = plot_path("Weibull_by_bias.png"),
+ggsave(filename = plot_path("Weibull_groups_by_bias.png"),
   plot = p,
-  width = 8, height = 6, dpi = 300,
-  device = ragg::agg_png
+  width = 8, height = 6, dpi = 300
 )
 
 

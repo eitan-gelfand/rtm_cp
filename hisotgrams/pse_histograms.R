@@ -1,0 +1,190 @@
+# ──────────────────────────────────────────────────────────────
+# Libraries
+# ──────────────────────────────────────────────────────────────
+library(dplyr)
+library(ggplot2)
+library(rstatix)
+library(ggpubr)
+library(tibble)
+library(scales)
+
+# ── Shared helpers ─────────────────────────────────────────────
+.root <- if (file.exists("R/paths.R")) "." else ".."
+source(file.path(.root, "R/paths.R"))
+source(file.path(.root, "R/theme_pub.R"))
+source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
+
+# ──────────────────────────────────────────────────────────────
+# 1) Load Weibull metric dataset
+# ──────────────────────────────────────────────────────────────
+df <- read.csv(data_path("weibull_metric_results.csv"))
+
+# ──────────────────────────────────────────────────────────────
+# 2) Aggregate to subject-level
+# ──────────────────────────────────────────────────────────────
+df_grouped <- df %>%
+  group_by(Subject, ExperimentName, Regression) %>%
+  summarize(
+    PSE   = mean(PSE, na.rm = TRUE),
+    Group = first(Group),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Group = factor(Group, levels = c("TD", "CP")),
+    ExperimentName = factor(ExperimentName,
+                            levels = c("Caucasian", "Asian")),
+    Regression = recode(Regression, "biasP" = "biasp", "biasM" = "biasm"),
+    Regression = factor(Regression, levels = c("biasm", "biasp"))
+  )
+
+# ──────────────────────────────────────────────────────────────
+# 3) Summary for plotting
+# ──────────────────────────────────────────────────────────────
+df_summary <- df_grouped %>%
+  group_by(ExperimentName, Regression, Group) %>%
+  summarize(
+    meanPSE = mean(PSE, na.rm = TRUE),
+    sdPSE   = sd(PSE,  na.rm = TRUE),
+    n       = n(),
+    sePSE   = sdPSE / sqrt(n),
+    .groups = "drop"
+  )
+
+y_range <- diff(range(df_summary$meanPSE, na.rm = TRUE))
+if (!is.finite(y_range) || y_range <= 0) y_range <- 1
+
+within_offset_step <- 0.03 * y_range
+between_offset_base <- 0.10 * y_range
+between_offset_step <- 0.03 * y_range
+dodge_width <- 0.8
+n_reg <- nlevels(df_grouped$Regression)
+group_levels <- levels(df_grouped$Group)
+x_td <- which(group_levels == "TD")
+x_cp <- which(group_levels == "CP")
+
+
+# ──────────────────────────────────────────────────────────────
+# 4) Base histogram
+# ──────────────────────────────────────────────────────────────
+p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
+  geom_col(
+    aes(fill = Regression),
+    position = position_dodge(width = 0.8),
+    color = "black"
+  ) +
+  geom_errorbar(
+    aes(
+      ymin  = meanPSE - sePSE,
+      ymax  = meanPSE + sePSE,
+      group = Regression
+    ),
+    width    = 0.2,
+    position = position_dodge(0.8)
+  ) +
+  facet_wrap(
+    ~ ExperimentName,
+    labeller = labeller(
+      ExperimentName = c("Asian" = "Other-Race",
+                         "Caucasian" = "Own-Race")
+    )
+  ) +
+  labs(x = "Group", y = "PSE") +
+  scale_fill_manual(
+    name   = "Regression",
+    values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),
+    labels = c("biasp" = "Bias+", "biasm" = "Bias-")
+  ) +
+  scale_y_continuous(labels = number_format(accuracy = 0.01)) +
+  theme_pub()
+
+# ──────────────────────────────────────────────────────────────
+# 5) Bias+ vs Bias- (paired test)
+# ──────────────────────────────────────────────────────────────
+stat_test_reg <- df_grouped %>%
+  group_by(ExperimentName, Group) %>%
+  t_test(PSE ~ Regression, paired = TRUE) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p") %>%
+  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
+  filter(p.signif != "ns") %>%
+  add_xy_position(x = "Group", dodge = 0.8)
+
+reg_base_y <- df_summary %>%
+  group_by(ExperimentName, Group) %>%
+  summarize(
+    reg_base = max(meanPSE + sePSE, na.rm = TRUE),
+    reg_se_top = max(sePSE, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+stat_test_reg <- stat_test_reg %>%
+  left_join(reg_base_y, by = c("ExperimentName", "Group")) %>%
+  mutate(
+    within_gap = pmax(0.02 * y_range, 0.35 * reg_se_top),
+    y.position = reg_base + within_gap +
+      (as.numeric(Group) - 1) * within_offset_step
+  )
+
+# ──────────────────────────────────────────────────────────────
+# 6) TD vs CP comparison
+# ──────────────────────────────────────────────────────────────
+stat_test_group <- df_grouped %>%
+  group_by(ExperimentName, Regression) %>%
+  t_test(PSE ~ Group, paired = FALSE) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p") %>%
+  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
+  filter(p.signif != "ns") %>%
+  add_xy_position(x = "Group", dodge = 0.8)
+
+group_base_y <- df_summary %>%
+  group_by(ExperimentName, Regression) %>%
+  summarize(group_base = max(meanPSE + sePSE, na.rm = TRUE), .groups = "drop")
+
+stat_test_group <- stat_test_group %>%
+  left_join(group_base_y, by = c("ExperimentName", "Regression")) %>%
+  mutate(y.position = group_base + between_offset_base +
+           (as.numeric(Regression) - 1) * between_offset_step) %>%
+  mutate(
+    reg_index = as.numeric(Regression),
+    x_shift = (reg_index - (n_reg + 1) / 2) * (dodge_width / n_reg),
+    xmin = x_td + x_shift,
+    xmax = x_cp + x_shift
+  ) %>%
+  select(-reg_index, -x_shift)
+
+# ──────────────────────────────────────────────────────────────
+# 7) Add significance brackets to final CP plot
+# ──────────────────────────────────────────────────────────────
+final_plot_cp <- p_cp +
+  stat_pvalue_manual(
+    stat_test_reg,
+    label        = "p.signif",
+    bracket.size = 0.8,
+    tip.length   = 0.01,
+    size         = 6
+  ) +
+  stat_pvalue_manual(
+    stat_test_group,
+    label        = "p.signif",
+    bracket.size = 0.8,
+    tip.length   = 0.01,
+    size         = 6
+  )
+
+if (interactive()) {
+  print(final_plot_cp)
+}
+
+# ──────────────────────────────────────────────────────────────
+# 8) Save
+# ──────────────────────────────────────────────────────────────
+ggsave(
+  plot_path("pse_histogram.png"),
+  final_plot_cp,
+  width = 8,
+  height = 6,
+  dpi = 300,
+  device = ragg::agg_png
+)

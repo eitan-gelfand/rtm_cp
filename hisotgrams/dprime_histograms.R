@@ -52,6 +52,18 @@ df_summary <- df_grouped %>%
     .groups    = "drop"
   )
 
+y_range <- diff(range(df_summary$meanDprime, na.rm = TRUE))
+if (!is.finite(y_range) || y_range <= 0) y_range <- 1
+
+within_offset_step <- 0.03 * y_range
+between_offset_base <- 0.10 * y_range
+between_offset_step <- 0.03 * y_range
+dodge_width <- 0.8
+n_reg <- nlevels(df_grouped$Regression)
+group_levels <- levels(df_grouped$Group)
+x_td <- which(group_levels == "TD")
+x_cp <- which(group_levels == "CP")
+
 
 # ──────────────────────────────────────────────────────────────
 # 4) Base histogram
@@ -91,21 +103,29 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
 # 5) Bias+ vs Bias– (paired test)
 # ──────────────────────────────────────────────────────────────
 stat_test_reg <- df_grouped %>%
-  group_by(ExperimentName) %>%
+  group_by(ExperimentName, Group) %>%
   t_test(Dprime ~ Regression, paired = TRUE) %>%
   adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
-  add_xy_position(x = "Group", dodge = 0.5)
+  filter(p.signif != "ns") %>%
+  add_xy_position(x = "Group", dodge = 0.8)
 
-# Place regression brackets above bars
-df_max_reg <- df_summary %>%
-  group_by(ExperimentName) %>%
-  summarize(max_bar = max(meanDprime), .groups = "drop")
+reg_base_y <- df_summary %>%
+  group_by(ExperimentName, Group) %>%
+  summarize(
+    reg_base = max(meanDprime + seDprime, na.rm = TRUE),
+    reg_se_top = max(seDprime, na.rm = TRUE),
+    .groups = "drop"
+  )
 
 stat_test_reg <- stat_test_reg %>%
-  left_join(df_max_reg, by = "ExperimentName") %>%
-  mutate(y.position = max_bar + 0.15)
+  left_join(reg_base_y, by = c("ExperimentName", "Group")) %>%
+  mutate(
+    within_gap = pmax(0.02 * y_range, 0.35 * reg_se_top),
+    y.position = reg_base + within_gap +
+      (as.numeric(Group) - 1) * within_offset_step
+  )
 
 # ──────────────────────────────────────────────────────────────
 # 6) TD vs CP comparison
@@ -115,17 +135,25 @@ stat_test_group <- df_grouped %>%
   t_test(Dprime ~ Group, paired = FALSE) %>%
   adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
-  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif))
+  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
+  filter(p.signif != "ns") %>%
+  add_xy_position(x = "Group", dodge = 0.8)
 
-# get y positions
-df_max_group <- df_summary %>%
+group_base_y <- df_summary %>%
   group_by(ExperimentName, Regression) %>%
-  summarize(max_bar = max(meanDprime), .groups = "drop")
+  summarize(group_base = max(meanDprime + seDprime, na.rm = TRUE), .groups = "drop")
 
 stat_test_group <- stat_test_group %>%
-  left_join(df_max_group,
-            by = c("ExperimentName", "Regression")) %>%
-  mutate(y.position = max_bar + 0.35)
+  left_join(group_base_y, by = c("ExperimentName", "Regression")) %>%
+  mutate(y.position = group_base + between_offset_base +
+           (as.numeric(Regression) - 1) * between_offset_step) %>%
+  mutate(
+    reg_index = as.numeric(Regression),
+    x_shift = (reg_index - (n_reg + 1) / 2) * (dodge_width / n_reg),
+    xmin = x_td + x_shift,
+    xmax = x_cp + x_shift
+  ) %>%
+  select(-reg_index, -x_shift)
 
 # ──────────────────────────────────────────────────────────────
 # 7) Add significance brackets to final CP plot

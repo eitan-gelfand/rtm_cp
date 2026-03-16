@@ -50,7 +50,7 @@ m_simple <- glmmTMB(
 p <- plot_model(
   m_simple,
   type = "pred",
-  terms = c("Age [19:79]", "Regression", "ExperimentName", "Group"),
+  terms = c("Age [19:79]", "Regression", "Group", "ExperimentName"),
   transform = "response",
   grid.type = "facet"
 )

@@ -54,7 +54,7 @@ p_all <- ggplot() +
     aes(x = factor(Range), ymin = mean_val - se, ymax = mean_val + se, color = ExperimentName),
     width = 0.1, linewidth = 0.8
   ) +
-  facet_grid(Group ~ Regression,
+  facet_grid(Regression ~ Group ,
              labeller = labeller(Regression = c("biasp" = "Bias+", "biasm" = "Bias−"))) +
   scale_x_discrete(
     breaks = as.character(unique(df_summary$Range)),

@@ -72,7 +72,7 @@ df_corr <- df_agg %>%
     n_trials_biasm, n_trials_biasp
   ) %>%
   mutate(
-    Group = factor(Group, levels = c("CP", "TD")),
+    Group = factor(Group, levels = c("TD", "CP")),
     ExperimentName = factor(ExperimentName, levels = c("Caucasian", "Asian"))
   )
 
@@ -127,7 +127,7 @@ p <- ggplot(
   df_corr,
   aes(x = biasM, y = Magnitude)
 ) +
-  facet_wrap(~ Group, nrow = 1) +
+  facet_grid(cols = vars(Group)) +
   geom_point(
     aes(color = ExperimentName),
     size = 2.8,
