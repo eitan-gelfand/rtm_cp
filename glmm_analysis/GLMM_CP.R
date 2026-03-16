@@ -73,10 +73,14 @@ final_plot <- p +
     labels = c(biasp = "Bias+", biasm = "Bias−")
   ) +
   scale_y_continuous(
-    limits = c(0.25, 0.9),
+    limits = c(0.15, 1),
     labels = scales::number_format(accuracy = 0.01)
   ) +
   guides(fill = "none") +
+  scale_x_continuous(
+    limits = c(19, 79),
+    breaks = seq(20, 80, by = 20)
+  ) +
   theme_pub() 
 
 # ──────────────────────────────────────────────
@@ -126,45 +130,45 @@ loso_once <- function(test_id) {
   )
 }
 
-# ---- run LOSO across all subjects ----
-set.seed(1)
-subjects <- unique(df$Subject)
-loso_results <- do.call(rbind, lapply(subjects, loso_once))
+# # ---- run LOSO across all subjects ----
+# set.seed(1)
+# subjects <- unique(df$Subject)
+# loso_results <- do.call(rbind, lapply(subjects, loso_once))
 
-# nice ordering for readability
-# loso_results <- loso_results %>% dplyr::arrange(Group, Subject)
+# # nice ordering for readability
+# # loso_results <- loso_results %>% dplyr::arrange(Group, Subject)
 
-# ---- print (full and preview) ----
-print(head(loso_results, 10))   # quick peek
-print(loso_results)             # full per-subject table with Group
+# # ---- print (full and preview) ----
+# print(head(loso_results, 10))   # quick peek
+# print(loso_results)             # full per-subject table with Group
 
-# ---- save to CSV ----
-out_path <- output_path("GLMM_LOSO_results.csv")
-write.csv(loso_results, out_path, row.names = FALSE)
-cat("\nSaved per-subject metrics with Group to:\n", out_path, "\n")
+# # ---- save to CSV ----
+# out_path <- output_path("GLMM_LOSO_results.csv")
+# write.csv(loso_results, out_path, row.names = FALSE)
+# cat("\nSaved per-subject metrics with Group to:\n", out_path, "\n")
 
-# ---- (optional) group-wise summary, if you want it too ----
-# dplyr::summarise will give you per-Group means & SEs
-loso_by_group <- loso_results %>%
-  dplyr::group_by(Group) %>%
-  dplyr::summarise(
-    n = dplyr::n(),
-    Brier_mean   = mean(Brier),
-    Brier_se     = sd(Brier)/sqrt(n),
-    LogLoss_mean = mean(LogLoss),
-    LogLoss_se   = sd(LogLoss)/sqrt(n),
-    .groups = "drop"
-  )
-print(loso_by_group)
+# # ---- (optional) group-wise summary, if you want it too ----
+# # dplyr::summarise will give you per-Group means & SEs
+# loso_by_group <- loso_results %>%
+#   dplyr::group_by(Group) %>%
+#   dplyr::summarise(
+#     n = dplyr::n(),
+#     Brier_mean   = mean(Brier),
+#     Brier_se     = sd(Brier)/sqrt(n),
+#     LogLoss_mean = mean(LogLoss),
+#     LogLoss_se   = sd(LogLoss)/sqrt(n),
+#     .groups = "drop"
+#   )
+# print(loso_by_group)
 
 
-loso_overall <- loso_results %>%
-  dplyr::summarise(
-    n = dplyr::n(),
-    Brier_mean = mean(Brier),  Brier_se = sd(Brier)/sqrt(n),
-    LogLoss_mean = mean(LogLoss), LogLoss_se = sd(LogLoss)/sqrt(n)
-  )
+# loso_overall <- loso_results %>%
+#   dplyr::summarise(
+#     n = dplyr::n(),
+#     Brier_mean = mean(Brier),  Brier_se = sd(Brier)/sqrt(n),
+#     LogLoss_mean = mean(LogLoss), LogLoss_se = sd(LogLoss)/sqrt(n)
+#   )
 
-cat(sprintf("LOSO (n=%d): Brier = %.3f (SE = %.3f), LogLoss = %.3f (SE = %.3f)\n",
-            loso_overall$n, loso_overall$Brier_mean, loso_overall$Brier_se,
-            loso_overall$LogLoss_mean, loso_overall$LogLoss_se))
+# cat(sprintf("LOSO (n=%d): Brier = %.3f (SE = %.3f), LogLoss = %.3f (SE = %.3f)\n",
+#             loso_overall$n, loso_overall$Brier_mean, loso_overall$Brier_se,
+#             loso_overall$LogLoss_mean, loso_overall$LogLoss_se))
