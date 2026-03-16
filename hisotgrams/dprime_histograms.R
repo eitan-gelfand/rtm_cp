@@ -6,7 +6,6 @@ library(ggplot2)
 library(rstatix)
 library(ggpubr)
 library(tibble)
-library(showtext)
 library(scales)
 
 # ── Shared helpers ─────────────────────────────────────────────
@@ -19,7 +18,7 @@ setup_fonts()
 # ──────────────────────────────────────────────────────────────
 # 1) Load CP Dprime dataset
 # ──────────────────────────────────────────────────────────────
-df <- read.csv(data_path("full_data_cp.csv")) %>%
+df <- read.csv(data_path("dprime_results_with_range.csv"))
   
 # ──────────────────────────────────────────────────────────────
 # 2) Aggregate over Range (since histogram uses subject-level)
@@ -114,7 +113,7 @@ stat_test_reg <- stat_test_reg %>%
 stat_test_group <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
   t_test(Dprime ~ Group, paired = FALSE) %>%
-  adjust_pvalue("bonferroni") %>%
+  adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif))
 
@@ -147,6 +146,10 @@ final_plot_cp <- p_cp +
     size         = 6
   )
 
+if (interactive()) {
+  print(final_plot_cp)
+}
+
 # ──────────────────────────────────────────────────────────────
 # 8) Save
 # ──────────────────────────────────────────────────────────────
@@ -155,5 +158,6 @@ ggsave(
   final_plot_cp,
   width = 8,
   height = 6,
-  dpi = 300
+  dpi = 300,
+  device = ragg::agg_png
 )

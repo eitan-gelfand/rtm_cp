@@ -3,7 +3,6 @@
 # ──────────────────────────────────────────────────────────────
 library(ggplot2)
 library(dplyr)
-library(showtext)
 library(scales)
 
 # ── Shared helpers ─────────────────────────────────────────────
@@ -53,7 +52,7 @@ p_all <- ggplot() +
   geom_line(
     data = stats_df_all,
     aes(x = factor(Range), y = mean_val, group = Regression, color = Regression),
-    size = 1.2
+    linewidth = 1.2
   ) +
   geom_point(
     data = stats_df_all,
@@ -63,7 +62,7 @@ p_all <- ggplot() +
   geom_errorbar(
     data = stats_df_all,
     aes(x = factor(Range), ymin = mean_val - se, ymax = mean_val + se, color = Regression),
-    width = 0.1, size = 0.8
+    width = 0.1, linewidth = 0.8
   ) +
   facet_grid(Group ~ ExperimentName,
              labeller = labeller(ExperimentName = c("Asian" = "Other-Race", "Caucasian" = "Own-Race"))) +
@@ -83,5 +82,6 @@ p_all <- ggplot() +
 # ──────────────────────────────────────────────────────────────
 ggsave(
   filename = plot_path("acc_range_CP_race.png"),
-  plot = p_all, width = 8, height = 6, dpi = 300
+  plot = p_all, width = 8, height = 6, dpi = 300,
+  device = ragg::agg_png
 )

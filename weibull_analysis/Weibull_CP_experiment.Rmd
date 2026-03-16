@@ -9,8 +9,6 @@ library(ggplot2)
 library(dplyr)
 library(minpack.lm) # for nlsLM
 
-library(showtext)
-
 # ── Shared helpers ─────────────────────────────────────────────
 .root <- if (file.exists("R/paths.R")) "." else ".."
 source(file.path(.root, "R/paths.R"))
@@ -164,7 +162,8 @@ p <- ggplot(data_predictions, aes(x = Range)) +
 
 ggsave(filename = plot_path("Weibull_all_groups_cp_experiment2.png"),
        plot  = p,
-       width = 8, height = 6, dpi = 300)
+  width = 8, height = 6, dpi = 300,
+  device = ragg::agg_png)
 ```
 
 ```{r}
@@ -211,7 +210,8 @@ for (subj in subjects) {
   ggsave(
     filename = plot_path(paste0("Subject_", subj, ".png")),
     plot   = p_subj,
-    width  = 4, height = 6, dpi = 300
+    width  = 4, height = 6, dpi = 300,
+    device = ragg::agg_png
   )
 }
 ```
@@ -259,7 +259,8 @@ for (g in unique_groups) {
            plot = p, 
            width = 4,
            height = 4, 
-           dpi = 300
+          dpi = 300,
+          device = ragg::agg_png
            )
     }
   }
@@ -304,7 +305,8 @@ p <- ggplot(data_predictions, aes(x = Range)) +
 
 ggsave(filename = plot_path("Weibull_by_bias.png"),
   plot = p,
-  width = 8, height = 6, dpi = 300
+  width = 8, height = 6, dpi = 300,
+  device = ragg::agg_png
 )
 
 

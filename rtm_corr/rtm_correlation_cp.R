@@ -19,8 +19,9 @@ library(tidyverse)
 source(file.path(.root, "R/paths.R"))
 source(file.path(.root, "R/theme_pub.R"))
 source(file.path(.root, "R/setup_fonts.R"))
+setup_fonts()
 
-base_family <- "serif"
+base_family <- getOption("project.base_family", "serif")
 
 
 # ---------------------------------------------------------
@@ -186,7 +187,9 @@ p <- ggplot(
     axis.text.x = element_text(angle = 0, hjust = 0.5)
   )
 
-print(p)
+if (interactive()) {
+  print(p)
+}
 
 # ---------------------------------------------------------
 # 7) Save plot
@@ -196,6 +199,7 @@ ggsave(
   plot     = p,
   width    = 10,
   height   = 6,
-  dpi      = 300
+  dpi      = 300,
+  device   = ragg::agg_png
 )
 

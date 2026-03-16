@@ -1,33 +1,34 @@
-#' Configure Font for Plot Rendering
+#' Configure a safe serif font for plot rendering.
 #'
-#' Sets up Times New Roman font for high-quality plot exports.
-#' Automatically falls back to serif if Times New Roman is not available.
-#' Compatible across different systems (macOS, Windows, Linux).
+#' Chooses the first available Times-like system serif so plots render
+#' consistently across operating systems without relying on showtext.
 #'
-#' @param dpi Dots per inch for plot rendering (default: 300)
-#' @return NULL (called for side effects)
-#' @examples
-#' setup_fonts()
-#' setup_fonts(dpi = 600)
+#' @param dpi Unused. Kept for compatibility with existing scripts.
+#' @return NULL (side effects only)
 setup_fonts <- function(dpi = 300) {
-  if (!requireNamespace("showtext", quietly = TRUE) ||
-      !requireNamespace("sysfonts", quietly = TRUE)) {
+  options(project.base_family = "serif")
+
+  if (!requireNamespace("systemfonts", quietly = TRUE)) {
     return(invisible(NULL))
   }
-  
-  # Define font path (macOS system location)
-  font_path <- "/System/Library/Fonts/Supplemental/Times New Roman.ttf"
-  
-  # Add font with fallback to serif if not found
-  font_target <- if (file.exists(font_path)) font_path else "serif"
-  try(
-    sysfonts::font_add("Times New Roman", regular = font_target),
-    silent = TRUE
+
+  serif_candidates <- c(
+    "Times New Roman",
+    "Times",
+    "Baskerville",
+    "Georgia",
+    "Liberation Serif",
+    "Nimbus Roman",
+    "DejaVu Serif"
   )
-  
-  # Configure showtext settings
-  showtext::showtext_opts(dpi = dpi)
-  showtext::showtext_auto()
-  
+
+  for (family in serif_candidates) {
+    font_match <- tryCatch(systemfonts::match_fonts(family), error = function(...) NULL)
+    if (!is.null(font_match) && nrow(font_match) > 0 && nzchar(font_match$path[[1]])) {
+      options(project.base_family = family)
+      break
+    }
+  }
+
   invisible(NULL)
 }
