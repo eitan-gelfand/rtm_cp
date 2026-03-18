@@ -32,6 +32,7 @@ df <- df %>%
 
 # center & scale Range in one step
 df$Range_c <- scale(df$Range, center = TRUE, scale = TRUE)
+df$Age_c <- scale(df$Age, center = TRUE, scale = FALSE)
 
 
 m_simple <- glmmTMB(
@@ -96,39 +97,79 @@ ggsave(
 )
 
 
+# ──────────────────────────────────────────────
+# Simple effects analysis
+# ──────────────────────────────────────────────
+
+# 2. Follow-up model
+# better interpret the Age predictor by including seperatly linear and quadratic terms 
+
+m_followup <- glmmTMB(
+  ACC ~ (Age_c + I(Age_c^2)) * Regression * ExperimentName * Group +
+    Range_c + (1 | Subject),
+  data   = df,
+  family = binomial(link = "probit")
+)
+
+# 3. Simple categorical effects within each group
+race_by_group <- emmeans(m_followup, pairwise ~ ExperimentName | Group)
+reg_by_group  <- emmeans(m_followup, pairwise ~ Regression | Group)
+
+# 4. Simple linear age effects within each group
+age_race_by_group <- emtrends(m_followup, pairwise ~ ExperimentName | Group, var = "Age_c")
+age_reg_by_group  <- emtrends(m_followup, pairwise ~ Regression | Group, var = "Age_c")
 
 
-#-------LOSO test
 
-# ---- metrics ----
-brier <- function(y, p) mean((y - p)^2)
-logloss <- function(y, p, eps = 1e-15) {
-  p <- pmin(pmax(p, eps), 1 - eps)
-  -mean(y * log(p) + (1 - y) * log(1 - p))
-}
+# 6. Print outputs
+cat("\nRACE EFFECT WITHIN EACH GROUP\n")
+print(race_by_group$contrasts)
 
-# ---- LOSO helper that also returns Group ----
-loso_once <- function(test_id) {
-  train_ids <- setdiff(unique(df$Subject), test_id)
-  train_df  <- df %>% dplyr::filter(Subject %in% train_ids)
-  test_df   <- df %>% dplyr::filter(Subject == test_id)
+cat("\nREGRESSION EFFECT WITHIN EACH GROUP\n")
+print(reg_by_group$contrasts)
+
+cat("\nLINEAR AGE × RACE WITHIN EACH GROUP\n")
+print(age_race_by_group$contrasts)
+
+cat("\nLINEAR AGE × REGRESSION WITHIN EACH GROUP\n")
+print(age_reg_by_group$contrasts)
+
+
+
+
+
+# ──────────────────────────────────────────────
+# LOSO analysis (Leave-One-Subject-Out)
+# ──────────────────────────────────────────────
+# # ---- metrics ----
+# brier <- function(y, p) mean((y - p)^2)
+# logloss <- function(y, p, eps = 1e-15) {
+#   p <- pmin(pmax(p, eps), 1 - eps)
+#   -mean(y * log(p) + (1 - y) * log(1 - p))
+# }
+
+# # ---- LOSO helper that also returns Group ----
+# loso_once <- function(test_id) {
+#   train_ids <- setdiff(unique(df$Subject), test_id)
+#   train_df  <- df %>% dplyr::filter(Subject %in% train_ids)
+#   test_df   <- df %>% dplyr::filter(Subject == test_id)
   
-  # Get the held-out subject's Group value
-  gvals <- unique(test_df$Group)
+#   # Get the held-out subject's Group value
+#   gvals <- unique(test_df$Group)
   
-  fit <- update(m_simple, data = train_df)
+#   fit <- update(m_simple, data = train_df)
   
-  # population-level predictions (no RE)
-  p <- predict(fit, newdata = test_df, type = "response", re.form = NA)
+#   # population-level predictions (no RE)
+#   p <- predict(fit, newdata = test_df, type = "response", re.form = NA)
   
-  data.frame(
-    Subject = test_id,
-    Group   = gvals,
-    Brier   = brier(test_df$ACC, p),
-    LogLoss = logloss(test_df$ACC, p),
-    stringsAsFactors = FALSE
-  )
-}
+#   data.frame(
+#     Subject = test_id,
+#     Group   = gvals,
+#     Brier   = brier(test_df$ACC, p),
+#     LogLoss = logloss(test_df$ACC, p),
+#     stringsAsFactors = FALSE
+#   )
+# }
 
 # # ---- run LOSO across all subjects ----
 # set.seed(1)
