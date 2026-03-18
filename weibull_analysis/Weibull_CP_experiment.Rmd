@@ -25,7 +25,8 @@ df <- read.csv(data_path("full_data_cp.csv"))
 
 
 # we will remove range = 0 because it's undifeined in the function
-data <- filter(df, Range != 0, !Subject %in% c(829))
+# remove subject 829, 1704, 1700
+data <- filter(df, Range != 0, !Subject %in% c(829, 1704, 1700))
 data$ACC <- pmin(pmax(data$ACC, 1e-4), 1 - 1e-4)
 
 fit_curve <- function(.data) {

@@ -40,7 +40,26 @@ extract_term <- function(model_std, term_regex) {
   }
 
   row <- coef_tbl[idx[1], , drop = FALSE]
-  list(beta = as.numeric(row[1, "Estimate"]), se = as.numeric(row[1, "Std. Error"]))
+  beta <- as.numeric(row[1, "Estimate"])
+  se <- as.numeric(row[1, "Std. Error"])
+
+  p_value <- if ("Pr(>|z|)" %in% colnames(row)) {
+    as.numeric(row[1, "Pr(>|z|)"])
+  } else if (is.finite(se) && se > 0) {
+    2 * stats::pnorm(-abs(beta / se))
+  } else {
+    NA_real_
+  }
+
+  star <- dplyr::case_when(
+    is.na(p_value) ~ "",
+    p_value < 0.001 ~ "***",
+    p_value < 0.01 ~ "**",
+    p_value < 0.05 ~ "*",
+    TRUE ~ ""
+  )
+
+  list(beta = beta, se = se, p = p_value, star = star)
 }
 
 fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_character_) {
@@ -119,6 +138,8 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
       Label = "t-inf model",
       Beta = b0_tinf$beta,
       SE = b0_tinf$se,
+      Signif_p = b0_tinf$p,
+      Asterisk = b0_tinf$star,
       stringsAsFactors = FALSE
     ),
     data.frame(
@@ -131,6 +152,8 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
       Label = "t-1",
       Beta = b1_t1$beta,
       SE = b1_t1$se,
+      Signif_p = b1_t1$p,
+      Asterisk = b1_t1$star,
       stringsAsFactors = FALSE
     ),
     data.frame(
@@ -143,6 +166,8 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
       Label = "t-inf",
       Beta = b1_tinf$beta,
       SE = b1_tinf$se,
+      Signif_p = b1_tinf$p,
+      Asterisk = b1_tinf$star,
       stringsAsFactors = FALSE
     )
   )

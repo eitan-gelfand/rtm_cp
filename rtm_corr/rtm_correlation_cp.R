@@ -129,16 +129,19 @@ p <- ggplot(
 ) +
   facet_grid(cols = vars(Group)) +
   geom_point(
-    aes(color = ExperimentName),
-    size = 2.8,
-    alpha = 0.85
+    aes(fill = ExperimentName),
+    shape = 21,
+    color = "white",
+    stroke = 0.25,
+    size = 2.2,
+    alpha = 0.62
   ) +
   geom_smooth(
     aes(color = ExperimentName, fill = ExperimentName),
     method = "lm",
     se = TRUE,
-    alpha = 0.15,
-    linewidth = 1.1
+    alpha = 0.20,
+    linewidth = 1.6
   ) +
   geom_hline(
     yintercept = 0,
@@ -148,7 +151,8 @@ p <- ggplot(
   ) +
   geom_text(
     data = corr_stats_plot,
-    aes(x = x_pos, y = y_pos, label = label, color = ExperimentName),
+    aes(x = x_pos, y = y_pos, label = label),
+    color = "#4F4F4F",
     inherit.aes = FALSE,
     hjust = 0,
     vjust = 1,
