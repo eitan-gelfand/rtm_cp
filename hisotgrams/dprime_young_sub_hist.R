@@ -16,23 +16,25 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load Weibull metric dataset
+# 1) Load CP Dprime dataset
 # ──────────────────────────────────────────────────────────────
-df <- read.csv(data_path("weibull_metric_results.csv"))
-
+df <- read.csv(data_path("dprime_results_with_range.csv"))
+# we will filter the data by Age < 42
+df <- df %>% filter(Age <= 42)
 # ──────────────────────────────────────────────────────────────
-# 2) Aggregate to subject-level
+# 2) Aggregate over Range (since histogram uses subject-level)
 # ──────────────────────────────────────────────────────────────
 df_grouped <- df %>%
   group_by(Subject, ExperimentName, Regression) %>%
   summarize(
-    PSE   = mean(PSE, na.rm = TRUE),
-    Group = first(Group),
+    Dprime = mean(Dprime, na.rm = TRUE),
+    CR     = mean(CR, na.rm = TRUE),
+    Group  = first(Group),
     .groups = "drop"
   ) %>%
   mutate(
     Group = factor(Group, levels = c("TD", "CP")),
-    ExperimentName = factor(ExperimentName,
+    ExperimentName = factor(ExperimentName, 
                             levels = c("Caucasian", "Asian")),
     Regression = recode(Regression, "biasP" = "biasp", "biasM" = "biasm"),
     Regression = factor(Regression, levels = c("biasm", "biasp"))
@@ -41,6 +43,7 @@ df_grouped <- df %>%
 # ──────────────────────────────────────────────────────────────
 # 3) Summary for plotting
 # ──────────────────────────────────────────────────────────────
+
 # number of within-subject cells per participant:
 # ExperimentName (2) × Regression (2) = 4
 k_within <- nlevels(df_grouped$ExperimentName) * nlevels(df_grouped$Regression)
@@ -49,26 +52,26 @@ morey_correction <- sqrt(k_within / (k_within - 1))
 # normalize within each subject, separately inside each between-subject Group
 df_grouped_ws <- df_grouped %>%
   group_by(Group, Subject) %>%
-  mutate(subject_mean = mean(PSE, na.rm = TRUE)) %>%
+  mutate(subject_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
   group_by(Group) %>%
-  mutate(group_grand_mean = mean(PSE, na.rm = TRUE)) %>%
+  mutate(group_grand_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(
-    PSE_norm = PSE - subject_mean + group_grand_mean
+    Dprime_norm = Dprime - subject_mean + group_grand_mean
   )
 
 df_summary <- df_grouped_ws %>%
   group_by(ExperimentName, Regression, Group) %>%
   summarize(
-    meanPSE = mean(PSE, na.rm = TRUE),
-    sd_norm = sd(PSE_norm, na.rm = TRUE),
-    n       = n_distinct(Subject),
-    sePSE   = (sd_norm / sqrt(n)) * morey_correction,
-    .groups = "drop"
+    meanDprime = mean(Dprime, na.rm = TRUE),                 # raw mean for bar height
+    sd_norm    = sd(Dprime_norm, na.rm = TRUE),             # SD after within-subject normalization
+    n          = n_distinct(Subject),
+    seDprime   = (sd_norm / sqrt(n)) * morey_correction,    # Morey-corrected within-subject SE
+    .groups    = "drop"
   )
 
-y_range <- diff(range(df_summary$meanPSE, na.rm = TRUE))
+y_range <- diff(range(df_summary$meanDprime, na.rm = TRUE))
 if (!is.finite(y_range) || y_range <= 0) y_range <- 1
 
 within_offset_step <- 0.03 * y_range
@@ -84,7 +87,7 @@ x_cp <- which(group_levels == "CP")
 # ──────────────────────────────────────────────────────────────
 # 4) Base histogram
 # ──────────────────────────────────────────────────────────────
-p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
+p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
   geom_col(
     aes(fill = Regression),
     position = position_dodge(width = 0.8),
@@ -92,8 +95,8 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
   ) +
   geom_errorbar(
     aes(
-      ymin  = meanPSE - sePSE,
-      ymax  = meanPSE + sePSE,
+      ymin  = meanDprime - seDprime,
+      ymax  = meanDprime + seDprime,
       group = Regression
     ),
     width    = 0.2,
@@ -106,7 +109,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
                          "Caucasian" = "Own-Race")
     )
   ) +
-  labs(x = "Group", y = "PSE") +
+  labs(x = "Group", y = "d-prime") +
   scale_fill_manual(
     name   = "Regression",
     values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),
@@ -116,11 +119,11 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 5) Bias+ vs Bias- (paired test)
+# 5) Bias+ vs Bias– (paired test)
 # ──────────────────────────────────────────────────────────────
 stat_test_reg <- df_grouped %>%
   group_by(ExperimentName, Group) %>%
-  t_test(PSE ~ Regression, paired = TRUE) %>%
+  t_test(Dprime ~ Regression, paired = TRUE) %>%
   adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
@@ -130,8 +133,8 @@ stat_test_reg <- df_grouped %>%
 reg_base_y <- df_summary %>%
   group_by(ExperimentName, Group) %>%
   summarize(
-    reg_base = max(meanPSE + sePSE, na.rm = TRUE),
-    reg_se_top = max(sePSE, na.rm = TRUE),
+    reg_base = max(meanDprime + seDprime, na.rm = TRUE),
+    reg_se_top = max(seDprime, na.rm = TRUE),
     .groups = "drop"
   )
 
@@ -148,7 +151,7 @@ stat_test_reg <- stat_test_reg %>%
 # ──────────────────────────────────────────────────────────────
 stat_test_group <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
-  t_test(PSE ~ Group, paired = FALSE) %>%
+  t_test(Dprime ~ Group, paired = FALSE) %>%
   adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
@@ -157,7 +160,7 @@ stat_test_group <- df_grouped %>%
 
 group_base_y <- df_summary %>%
   group_by(ExperimentName, Regression) %>%
-  summarize(group_base = max(meanPSE + sePSE, na.rm = TRUE), .groups = "drop")
+  summarize(group_base = max(meanDprime + seDprime, na.rm = TRUE), .groups = "drop")
 
 stat_test_group <- stat_test_group %>%
   left_join(group_base_y, by = c("ExperimentName", "Regression")) %>%
@@ -198,7 +201,7 @@ if (interactive()) {
 # 8) Save
 # ──────────────────────────────────────────────────────────────
 ggsave(
-  plot_path("pse_histogram.png"),
+  plot_path("dprime_histogram_young.png"),
   final_plot_cp,
   width = 8,
   height = 6,

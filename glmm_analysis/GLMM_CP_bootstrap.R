@@ -15,7 +15,7 @@ source(file.path(.root, "R/paths.R"))
 bootstrap_seed       <- 20260321L
 bootstrap_iterations <- 1000L
 bootstrap_age_step   <- 1
-bootstrap_save_every <- 4L
+bootstrap_save_every <- 10L
 bootstrap_age_grid   <- seq(19, 78, by = bootstrap_age_step)
 bootstrap_file_stem  <- "glmm_cp_peak_bootstrap_debug"
 
@@ -428,16 +428,17 @@ cat(
 
 for (iter in seq_len(bootstrap_iterations)) {
   iter_start_time <- Sys.time()
+  m_boot <- NULL
   cat(sprintf("\n[Bootstrap] Iteration %d/%d started\n", iter, bootstrap_iterations))
 
   iter_result <- tryCatch(
     {
       boot_df <- resample_subject_clusters(df, subjects_by_group)
-      boot_fit <- update(m_simple, data = boot_df)
+      m_boot <- update(m_simple, data = boot_df)
 
       boot_pred_grid <- make_bootstrap_prediction_grid(boot_df, bootstrap_age_grid)
       boot_pred_grid$pred <- predict(
-        boot_fit,
+        m_boot,
         newdata = boot_pred_grid,
         type = "response",
         re.form = NA
@@ -579,6 +580,9 @@ for (iter in seq_len(bootstrap_iterations)) {
 
     cat(sprintf("[Bootstrap] Checkpoint saved after iteration %d\n", iter))
   }
+
+  rm(m_boot)
+  gc()
 }
 
 # ──────────────────────────────────────────────

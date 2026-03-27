@@ -42,13 +42,30 @@ df_grouped <- df %>%
 # ──────────────────────────────────────────────────────────────
 # 3) Summary for plotting
 # ──────────────────────────────────────────────────────────────
-df_summary <- df_grouped %>%
+# number of within-subject cells per participant:
+# ExperimentName (2) × Regression (2) = 4
+k_within <- nlevels(df_grouped$ExperimentName) * nlevels(df_grouped$Regression)
+morey_correction <- sqrt(k_within / (k_within - 1))
+
+# normalize within each subject, separately inside each between-subject Group
+df_grouped_ws <- df_grouped %>%
+  group_by(Group, Subject) %>%
+  mutate(subject_mean = mean(Dprime, na.rm = TRUE)) %>%
+  ungroup() %>%
+  group_by(Group) %>%
+  mutate(group_grand_mean = mean(Dprime, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(
+    Dprime_norm = Dprime - subject_mean + group_grand_mean
+  )
+
+df_summary <- df_grouped_ws %>%
   group_by(ExperimentName, Regression, Group) %>%
   summarize(
     meanDprime = mean(Dprime, na.rm = TRUE),
-    sdDprime   = sd(Dprime,  na.rm = TRUE),
-    n          = n(),
-    seDprime   = sdDprime / sqrt(n),
+    sd_norm    = sd(Dprime_norm, na.rm = TRUE),
+    n          = n_distinct(Subject),
+    seDprime   = (sd_norm / sqrt(n)) * morey_correction,
     .groups    = "drop"
   )
 
@@ -90,7 +107,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
                          "Caucasian" = "Own-Race")
     )
   ) +
-  labs(x = "Group", y = "D-prime") +
+  labs(x = "Group", y = "d-prime") +
   scale_fill_manual(
     name   = "Regression",
     values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),

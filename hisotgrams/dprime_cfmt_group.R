@@ -16,24 +16,33 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load Weibull metric dataset
+# 1) Load CP Dprime dataset with CFMT grouping
 # ──────────────────────────────────────────────────────────────
-df <- read.csv(data_path("weibull_metric_results.csv"))
+df <- read.csv(data_path("dprime_results_with_range_and_group.csv"))
 
 # ──────────────────────────────────────────────────────────────
-# 2) Aggregate to subject-level
+# 2) Aggregate over Range (subject-level histogram)
 # ──────────────────────────────────────────────────────────────
+cfmt_levels <- sort(unique(stats::na.omit(as.character(df$CFMTgroup))))
+preferred_cfmt_levels <- c("L", "H")
+cfmt_levels <- c(preferred_cfmt_levels[preferred_cfmt_levels %in% cfmt_levels],
+                 setdiff(cfmt_levels, preferred_cfmt_levels))
+
 df_grouped <- df %>%
+  filter(!is.na(CFMTgroup), CFMTgroup != "") %>%
   group_by(Subject, ExperimentName, Regression) %>%
   summarize(
-    PSE   = mean(PSE, na.rm = TRUE),
-    Group = first(Group),
-    .groups = "drop"
+    Dprime    = mean(Dprime, na.rm = TRUE),
+    CR        = mean(CR, na.rm = TRUE),
+    CFMTgroup = first(CFMTgroup),
+    .groups   = "drop"
   ) %>%
   mutate(
-    Group = factor(Group, levels = c("TD", "CP")),
-    ExperimentName = factor(ExperimentName,
-                            levels = c("Caucasian", "Asian")),
+    CFMTgroup = factor(CFMTgroup, levels = cfmt_levels),
+    ExperimentName = factor(
+      ExperimentName,
+      levels = c("Caucasian", "Asian")
+    ),
     Regression = recode(Regression, "biasP" = "biasp", "biasM" = "biasm"),
     Regression = factor(Regression, levels = c("biasm", "biasp"))
   )
@@ -46,160 +55,117 @@ df_grouped <- df %>%
 k_within <- nlevels(df_grouped$ExperimentName) * nlevels(df_grouped$Regression)
 morey_correction <- sqrt(k_within / (k_within - 1))
 
-# normalize within each subject, separately inside each between-subject Group
+# normalize within each subject, separately inside each between-subject CFMT group
 df_grouped_ws <- df_grouped %>%
-  group_by(Group, Subject) %>%
-  mutate(subject_mean = mean(PSE, na.rm = TRUE)) %>%
+  group_by(CFMTgroup, Subject) %>%
+  mutate(subject_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
-  group_by(Group) %>%
-  mutate(group_grand_mean = mean(PSE, na.rm = TRUE)) %>%
+  group_by(CFMTgroup) %>%
+  mutate(group_grand_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(
-    PSE_norm = PSE - subject_mean + group_grand_mean
+    Dprime_norm = Dprime - subject_mean + group_grand_mean
   )
 
 df_summary <- df_grouped_ws %>%
-  group_by(ExperimentName, Regression, Group) %>%
+  group_by(ExperimentName, Regression, CFMTgroup) %>%
   summarize(
-    meanPSE = mean(PSE, na.rm = TRUE),
-    sd_norm = sd(PSE_norm, na.rm = TRUE),
-    n       = n_distinct(Subject),
-    sePSE   = (sd_norm / sqrt(n)) * morey_correction,
-    .groups = "drop"
+    meanDprime = mean(Dprime, na.rm = TRUE),
+    sd_norm    = sd(Dprime_norm, na.rm = TRUE),
+    n          = n_distinct(Subject),
+    seDprime   = (sd_norm / sqrt(n)) * morey_correction,
+    .groups    = "drop"
   )
-
-y_range <- diff(range(df_summary$meanPSE, na.rm = TRUE))
-if (!is.finite(y_range) || y_range <= 0) y_range <- 1
-
-within_offset_step <- 0.03 * y_range
-between_offset_base <- 0.10 * y_range
-between_offset_step <- 0.03 * y_range
-dodge_width <- 0.8
-n_reg <- nlevels(df_grouped$Regression)
-group_levels <- levels(df_grouped$Group)
-x_td <- which(group_levels == "TD")
-x_cp <- which(group_levels == "CP")
-
 
 # ──────────────────────────────────────────────────────────────
 # 4) Base histogram
 # ──────────────────────────────────────────────────────────────
-p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
+p_cp_cfmt <- ggplot(df_summary, aes(x = CFMTgroup, y = meanDprime)) +
   geom_col(
     aes(fill = Regression),
     position = position_dodge(width = 0.8),
+    width = 0.8,
     color = "black"
   ) +
   geom_errorbar(
     aes(
-      ymin  = meanPSE - sePSE,
-      ymax  = meanPSE + sePSE,
+      ymin = meanDprime - seDprime,
+      ymax = meanDprime + seDprime,
       group = Regression
     ),
-    width    = 0.2,
-    position = position_dodge(0.8)
+    width = 0.2,
+    position = position_dodge(width = 0.8)
   ) +
   facet_wrap(
     ~ ExperimentName,
     labeller = labeller(
-      ExperimentName = c("Asian" = "Other-Race",
-                         "Caucasian" = "Own-Race")
+      ExperimentName = c(
+        "Asian" = "Other-Race",
+        "Caucasian" = "Own-Race"
+      )
     )
   ) +
-  labs(x = "Group", y = "PSE") +
+  labs(x = "CFMT Group", y = "d-prime") +
   scale_fill_manual(
-    name   = "Regression",
+    name = "Regression",
     values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),
-    labels = c("biasp" = "Bias+", "biasm" = "Bias-")
+    labels = c("biasp" = "Bias+", "biasm" = "Bias-"),
+    drop = FALSE
   ) +
   scale_y_continuous(labels = number_format(accuracy = 0.01)) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 5) Bias+ vs Bias- (paired test)
+# 5) CFMT-group comparison within each Race panel, separately by Regression
 # ──────────────────────────────────────────────────────────────
-stat_test_reg <- df_grouped %>%
-  group_by(ExperimentName, Group) %>%
-  t_test(PSE ~ Regression, paired = TRUE) %>%
+stat_test_cfmt <- df_grouped %>%
+  group_by(ExperimentName, Regression) %>%
+  t_test(Dprime ~ CFMTgroup, paired = FALSE) %>%
   adjust_pvalue(method = "bonferroni") %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
   filter(p.signif != "ns") %>%
-  add_xy_position(x = "Group", dodge = 0.8)
+  add_xy_position(x = "CFMTgroup", dodge = 0.8)
 
-reg_base_y <- df_summary %>%
-  group_by(ExperimentName, Group) %>%
+y_range <- diff(range(df_summary$meanDprime, na.rm = TRUE))
+if (!is.finite(y_range) || y_range <= 0) y_range <- 1
+
+cfmt_base_y <- df_summary %>%
+  group_by(ExperimentName, Regression) %>%
   summarize(
-    reg_base = max(meanPSE + sePSE, na.rm = TRUE),
-    reg_se_top = max(sePSE, na.rm = TRUE),
+    bracket_base = max(meanDprime + seDprime, na.rm = TRUE),
     .groups = "drop"
   )
 
-stat_test_reg <- stat_test_reg %>%
-  left_join(reg_base_y, by = c("ExperimentName", "Group")) %>%
+stat_test_cfmt <- stat_test_cfmt %>%
+  left_join(cfmt_base_y, by = c("ExperimentName", "Regression")) %>%
   mutate(
-    within_gap = pmax(0.02 * y_range, 0.35 * reg_se_top),
-    y.position = reg_base + within_gap +
-      (as.numeric(Group) - 1) * within_offset_step
+    y.position = bracket_base + 0.08 * y_range +
+      (as.numeric(Regression) - 1) * 0.03 * y_range
   )
 
 # ──────────────────────────────────────────────────────────────
-# 6) TD vs CP comparison
+# 6) Add significance brackets
 # ──────────────────────────────────────────────────────────────
-stat_test_group <- df_grouped %>%
-  group_by(ExperimentName, Regression) %>%
-  t_test(PSE ~ Group, paired = FALSE) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance("p") %>%
-  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
-  filter(p.signif != "ns") %>%
-  add_xy_position(x = "Group", dodge = 0.8)
-
-group_base_y <- df_summary %>%
-  group_by(ExperimentName, Regression) %>%
-  summarize(group_base = max(meanPSE + sePSE, na.rm = TRUE), .groups = "drop")
-
-stat_test_group <- stat_test_group %>%
-  left_join(group_base_y, by = c("ExperimentName", "Regression")) %>%
-  mutate(y.position = group_base + between_offset_base +
-           (as.numeric(Regression) - 1) * between_offset_step) %>%
-  mutate(
-    reg_index = as.numeric(Regression),
-    x_shift = (reg_index - (n_reg + 1) / 2) * (dodge_width / n_reg),
-    xmin = x_td + x_shift,
-    xmax = x_cp + x_shift
-  ) %>%
-  select(-reg_index, -x_shift)
-
-# ──────────────────────────────────────────────────────────────
-# 7) Add significance brackets to final CP plot
-# ──────────────────────────────────────────────────────────────
-final_plot_cp <- p_cp +
+final_plot_cp_cfmt <- p_cp_cfmt +
   stat_pvalue_manual(
-    stat_test_reg,
-    label        = "p.signif",
+    stat_test_cfmt,
+    label = "p.signif",
     bracket.size = 0.8,
-    tip.length   = 0.01,
-    size         = 6
-  ) +
-  stat_pvalue_manual(
-    stat_test_group,
-    label        = "p.signif",
-    bracket.size = 0.8,
-    tip.length   = 0.01,
-    size         = 6
+    tip.length = 0.01,
+    size = 6
   )
 
 if (interactive()) {
-  print(final_plot_cp)
+  print(final_plot_cp_cfmt)
 }
 
 # ──────────────────────────────────────────────────────────────
-# 8) Save
+# 7) Save
 # ──────────────────────────────────────────────────────────────
 ggsave(
-  plot_path("pse_histogram.png"),
-  final_plot_cp,
+  plot_path("dprime_cfmt_group.png"),
+  final_plot_cp_cfmt,
   width = 8,
   height = 6,
   dpi = 300,

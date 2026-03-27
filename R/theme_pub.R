@@ -1,6 +1,6 @@
 # Shared publication-style ggplot theme used across analysis scripts.
 
-theme_pub <- function(base_size = 14,
+theme_pub <- function(base_size = 18,
                       base_family = getOption("project.base_family", "serif")) {
   theme_bw(base_size = base_size, base_family = base_family) +
     theme(
