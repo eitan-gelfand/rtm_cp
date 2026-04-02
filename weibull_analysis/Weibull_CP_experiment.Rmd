@@ -111,7 +111,6 @@ data_predictions <- data_fits |>
     Group = factor(Group,levels = c( "TD","CP")),
     ExperimentName = factor(ExperimentName, levels = c("Caucasian", "Asian"))
   )
-# *add Group*
 ```
 
 # Save results
@@ -128,7 +127,6 @@ data_params2 <- data_predictions |>
   ungroup() |> 
   left_join(data_params, by = join_by(ExperimentName, Subject,Group,Regression))
 
-#*add Group*
  write.csv(data_predictions, data_path("weibull_trial_predictions.csv"))
  write.csv(data_params2, data_path("weibull_metric_results.csv"))
 ```

@@ -447,9 +447,6 @@ def run_workflow(data_file: str = DEFAULT_DATA_FILE) -> dict[str, pd.DataFrame]:
 
     # Step 8: Export to CSV
     print("\n[INFO] Exporting results to CSV...")
-   # hits_df.to_csv(data_path("Hits_Output.csv"), index=False)
-    #fa_df.to_csv(data_path("FA_Output.csv"), index=False)
-    #combined_df.to_csv(data_path("Combined_Output_WithDprime.csv"), index=False)
     filtered_df.to_csv(data_path("dprime_results_with_range.csv"), index=False)
     grouped_df.to_csv(data_path("dprime_results.csv"), index=False)
 

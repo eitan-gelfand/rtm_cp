@@ -1,3 +1,7 @@
+# Subject-level PSE summary plot from the Weibull fits.
+# This figure summarizes the point of subjective equality by Group, Race, and
+# Bias condition after averaging across subject-level curve estimates.
+#
 # ──────────────────────────────────────────────────────────────
 # Libraries
 # ──────────────────────────────────────────────────────────────
@@ -16,12 +20,12 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load Weibull metric dataset
+# 1) Load subject-level Weibull metrics
 # ──────────────────────────────────────────────────────────────
 df <- read.csv(data_path("weibull_metric_results.csv"))
 
 # ──────────────────────────────────────────────────────────────
-# 2) Aggregate to subject-level
+# 2) Aggregate to one PSE value per subject x condition
 # ──────────────────────────────────────────────────────────────
 df_grouped <- df %>%
   group_by(Subject, ExperimentName, Regression) %>%
@@ -40,6 +44,8 @@ df_grouped <- df %>%
 
 # ──────────────────────────────────────────────────────────────
 # 3) Summary for plotting
+# Error bars use a within-subject Morey correction because Race and Regression
+# vary within subject whereas Group varies between subjects.
 # ──────────────────────────────────────────────────────────────
 # number of within-subject cells per participant:
 # ExperimentName (2) × Regression (2) = 4
@@ -116,7 +122,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 5) Bias+ vs Bias- (paired test)
+# 5) Bias+ vs Bias- comparison within each Group x Race panel
 # ──────────────────────────────────────────────────────────────
 stat_test_reg <- df_grouped %>%
   group_by(ExperimentName, Group) %>%
@@ -144,7 +150,7 @@ stat_test_reg <- stat_test_reg %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 6) TD vs CP comparison
+# 6) TD vs CP comparison within each Race x Bias condition
 # ──────────────────────────────────────────────────────────────
 stat_test_group <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
@@ -172,7 +178,7 @@ stat_test_group <- stat_test_group %>%
   select(-reg_index, -x_shift)
 
 # ──────────────────────────────────────────────────────────────
-# 7) Add significance brackets to final CP plot
+# 7) Add significance brackets to the final plot
 # ──────────────────────────────────────────────────────────────
 final_plot_cp <- p_cp +
   stat_pvalue_manual(

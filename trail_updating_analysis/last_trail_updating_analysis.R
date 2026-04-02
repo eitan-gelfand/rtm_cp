@@ -1,7 +1,13 @@
-# Analysis: CP/TD updating-model pipeline (last trail)
+# Analysis: CP/TD updating-model pipeline (last trial)
 # Input:  data/updating_data_cp.csv
 # Output: output/updating_beta_results.csv
 #         output/last_trail_updating_analysis.png
+#
+# This script compares two brief updating models described in the manuscript:
+# one model uses the overall accumulated mean across the experiment (t-inf),
+# and the second adds the immediately preceding trial (t-1). Models are fit
+# separately by group and race; TD is split by CFMT level to compare CP with
+# lower- and higher-performing controls.
 
 library(lme4)
 library(ggplot2)
@@ -13,6 +19,9 @@ source(file.path(.root, "R/theme_pub.R"))
 source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
+#
+# Center predictors for model fitting and create standardized versions for
+# reporting comparable beta weights across predictors.
 center_scale <- function(x) as.numeric(scale(x, scale = FALSE))
 z_scale <- function(x) {
   mu <- mean(x, na.rm = TRUE)
@@ -63,6 +72,8 @@ extract_term <- function(model_std, term_regex) {
 }
 
 fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_character_) {
+  # Fit the manuscript updating models within one analysis cell
+  # (group x race, and CFMT subgroup for TD).
   if (is.na(cfmt_level)) {
     df <- df_all %>% filter(.data$Group == group_name, .data$ExperimentName == race_name)
     panel_key <- "CP"
@@ -88,6 +99,7 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
   df$z_New_t1 <- z_scale(df$c_New_t1)
   df$z_Range <- z_scale(df$c_Range)
 
+  # Model 0: long-term average only (t-inf).
   model0 <- glmer(
     ACC ~ c_New_tinf + c_Range + (1 | Subject),
     data = df,
@@ -95,6 +107,7 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
     nAGQ = 0
   )
 
+  # Model 1: long-term average plus previous-trial term (t-1).
   model1 <- glmer(
     ACC ~ c_New_tinf + c_New_t1 + c_Range + (1 | Subject),
     data = df,
@@ -102,6 +115,7 @@ fit_condition <- function(df_all, group_name, race_name, cfmt_level = NA_charact
     nAGQ = 0
   )
 
+  # Standardized versions are used only to extract comparable beta estimates.
   model0_std <- glmer(
     ACC ~ z_New_tinf + z_Range + (1 | Subject),
     data = df,
@@ -185,6 +199,8 @@ data <- subset(
   Range > 0 & !is.na(ACC) & !is.na(New_t1) & !is.na(New_tinf) & !is.na(Subject)
 )
 
+# Analysis cells follow the manuscript comparison:
+# TD split by CFMT level (L/H), CP kept as one group.
 conditions <- data.frame(
   Group = c("TD", "TD", "TD", "TD", "CP", "CP"),
   ExperimentName = c("Caucasian", "Asian", "Caucasian", "Asian", "Caucasian", "Asian"),
@@ -213,6 +229,8 @@ results <- bind_rows(results_list) %>%
 write.csv(results, output_path("updating_beta_results.csv"), row.names = FALSE)
 cat("Saved results table to:", output_path("updating_beta_results.csv"), "\n")
 
+# Plot the standardized beta weights for the long-term and recent-history terms
+# in each group/race panel.
 pal_race <- c("Own-Race" = "#A6D8C3", "Other-Race" = "#F6B48F")
 
 p <- ggplot(results, aes(x = Point, y = Beta, color = Race)) +

@@ -1,3 +1,7 @@
+# Bootstrap follow-up for the main GLMM age-trajectory analysis.
+# This script resamples subjects within group, refits the manuscript GLMM, and
+# summarizes the stability of the estimated peak age in TD and CP.
+
 # Load required packages
 library(glmmTMB)
 library(dplyr)
@@ -8,6 +12,8 @@ source(file.path(.root, "R/paths.R"))
 
 # ──────────────────────────────────────────────
 # Bootstrap controls
+# These settings define the number of bootstrap refits and the age grid used
+# when searching for performance peaks in the fitted trajectories.
 # ──────────────────────────────────────────────
 
 # Keep the main controls together so scaling from a quick debug run
@@ -20,7 +26,7 @@ bootstrap_age_grid   <- seq(19, 78, by = bootstrap_age_step)
 bootstrap_file_stem  <- "glmm_cp_peak_bootstrap_debug"
 
 # ──────────────────────────────────────────────
-# Read and preprocess data
+# Read and preprocess the same trial-level dataset used in the main GLMM
 # ──────────────────────────────────────────────
 
 df <- read.csv(data_path("full_data_cp.csv")) %>%
@@ -41,7 +47,8 @@ df <- df %>%
 df$Range_c <- scale(df$Range, center = TRUE, scale = TRUE)
 
 # ──────────────────────────────────────────────
-# Fit the same official GLMM
+# Fit the same manuscript GLMM before bootstrapping
+# Each bootstrap iteration refits this model structure on a resampled dataset.
 # ──────────────────────────────────────────────
 
 m_simple <- glmmTMB(
@@ -57,6 +64,8 @@ summary(m_simple)
 
 # ──────────────────────────────────────────────
 # Helper functions
+# These helpers resample subject clusters, generate population-level
+# predictions, extract peak ages, and save intermediate results.
 # ──────────────────────────────────────────────
 
 # Subject-level cluster bootstrap within Group. This is the preferred
@@ -102,6 +111,8 @@ resample_subject_clusters <- function(data, subject_ids_by_group) {
 }
 
 make_bootstrap_prediction_grid <- function(data, age_grid) {
+  # Range_c is fixed at 0 so peak ages are estimated at the average
+  # discrimination distance, matching the main GLMM summaries.
   pred_grid <- expand.grid(
     Age = age_grid,
     Regression = levels(data$Regression),
@@ -405,6 +416,8 @@ format_proportion <- function(value) {
 
 # ──────────────────────────────────────────────
 # Bootstrap loop
+# For each iteration, resample subjects within group, refit the GLMM, generate
+# age predictions, and extract overall and race-specific peak ages.
 # ──────────────────────────────────────────────
 
 set.seed(bootstrap_seed)
@@ -587,6 +600,8 @@ for (iter in seq_len(bootstrap_iterations)) {
 
 # ──────────────────────────────────────────────
 # Collect and summarise results
+# Summaries report the bootstrap distribution of the peak ages and the
+# CP-versus-TD peak-age differences.
 # ──────────────────────────────────────────────
 
 bootstrap_results <- bind_rows(bootstrap_results_list)
@@ -670,6 +685,8 @@ bootstrap_summary <- list(
 
 # ──────────────────────────────────────────────
 # Save outputs
+# Both raw iteration-level outputs and compact summaries are written so the
+# bootstrap can be inspected without rerunning the full procedure.
 # ──────────────────────────────────────────────
 
 bootstrap_results_rds <- output_path(paste0(bootstrap_file_stem, "_results.rds"))

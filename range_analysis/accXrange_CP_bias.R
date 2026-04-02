@@ -1,3 +1,7 @@
+# Accuracy-by-range plot with Race as the plotted contrast.
+# This figure shows how discrimination accuracy changes with morph distance,
+# separately by Group and Bias condition, after averaging within subject.
+#
 # ──────────────────────────────────────────────────────────────
 # Libraries
 # ──────────────────────────────────────────────────────────────
@@ -13,7 +17,9 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load & summarize
+# 1) Load trial-level data and average within subject
+# Range == 0 trials are excluded because they are not part of the main
+# discrimination analysis.
 # ──────────────────────────────────────────────────────────────
 df_summary <- read.csv(data_path("full_data_cp.csv")) %>%
   filter(Range != 0) %>%
@@ -29,14 +35,14 @@ df_summary <- read.csv(data_path("full_data_cp.csv")) %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 2) Means & SEs
+# 2) Compute group-level means and standard errors
 # ──────────────────────────────────────────────────────────────
 stats_df_all <- df_summary %>%
   group_by(Group, ExperimentName, Range, Regression) %>%
   summarize(mean_val = mean(mean_ACC), se = sd(mean_ACC)/sqrt(n()), .groups = "drop")
 
 # ──────────────────────────────────────────────────────────────
-# 3) Plot
+# 3) Plot Race differences across morph range
 # ──────────────────────────────────────────────────────────────
 p_all <- ggplot() +
   geom_line(
@@ -69,7 +75,7 @@ p_all <- ggplot() +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 4) Save
+# 4) Save the figure
 # ──────────────────────────────────────────────────────────────
 ggsave(
   filename = plot_path("acc_range_CP_bias.png"),

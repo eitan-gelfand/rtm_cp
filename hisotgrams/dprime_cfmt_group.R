@@ -1,3 +1,7 @@
+# Subject-level d-prime summary plot split by CFMT subgroup.
+# This follow-up compares lower- and higher-CFMT participants within TD to show
+# how sensitivity differs across the manuscript's ability-based grouping.
+#
 # ──────────────────────────────────────────────────────────────
 # Libraries
 # ──────────────────────────────────────────────────────────────
@@ -16,12 +20,12 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load CP Dprime dataset with CFMT grouping
+# 1) Load d-prime results with CFMT grouping
 # ──────────────────────────────────────────────────────────────
 df <- read.csv(data_path("dprime_results_with_range_and_group.csv"))
 
 # ──────────────────────────────────────────────────────────────
-# 2) Aggregate over Range (subject-level histogram)
+# 2) Aggregate over Range to obtain one value per subject x condition
 # ──────────────────────────────────────────────────────────────
 cfmt_levels <- sort(unique(stats::na.omit(as.character(df$CFMTgroup))))
 preferred_cfmt_levels <- c("L", "H")
@@ -49,6 +53,8 @@ df_grouped <- df %>%
 
 # ──────────────────────────────────────────────────────────────
 # 3) Summary for plotting
+# Error bars use a within-subject Morey correction because Race and Regression
+# vary within subject whereas CFMT group varies between subjects.
 # ──────────────────────────────────────────────────────────────
 # number of within-subject cells per participant:
 # ExperimentName (2) × Regression (2) = 4
@@ -116,7 +122,7 @@ p_cp_cfmt <- ggplot(df_summary, aes(x = CFMTgroup, y = meanDprime)) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 5) CFMT-group comparison within each Race panel, separately by Regression
+# 5) CFMT-group comparison within each Race panel, separately by Bias condition
 # ──────────────────────────────────────────────────────────────
 stat_test_cfmt <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
@@ -145,7 +151,7 @@ stat_test_cfmt <- stat_test_cfmt %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 6) Add significance brackets
+# 6) Add significance brackets to the final plot
 # ──────────────────────────────────────────────────────────────
 final_plot_cp_cfmt <- p_cp_cfmt +
   stat_pvalue_manual(

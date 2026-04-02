@@ -1,3 +1,7 @@
+# Accuracy-by-range plot with Bias condition as the plotted contrast.
+# This figure shows how discrimination accuracy changes with morph distance,
+# separately by Group and Race, after averaging within subject.
+#
 # ──────────────────────────────────────────────────────────────
 # Libraries
 # ──────────────────────────────────────────────────────────────
@@ -14,14 +18,16 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load & summarize
+# 1) Load trial-level data and average within subject
+# Range == 0 trials are excluded because they are not part of the main
+# discrimination analysis.
 # ──────────────────────────────────────────────────────────────
 df_summary <- read.csv(data_path("full_data_cp.csv")) %>%
   filter(Range != 0) %>%
   group_by(Subject, ExperimentName, Range, Regression, Group) %>%
   summarize(mean_ACC = mean(ACC, na.rm = TRUE), .groups = "drop") %>%
   mutate(
-    Group = factor(Group, levels = c("TD", "CP")),  # adapt to your CP data
+    Group = factor(Group, levels = c("TD", "CP")),
     ExperimentName = factor(ExperimentName, levels = c("Caucasian", "Asian"))
   ) %>%
   mutate(
@@ -30,7 +36,7 @@ df_summary <- read.csv(data_path("full_data_cp.csv")) %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 2) Means & SEs
+# 2) Compute group-level means and standard errors
 # ──────────────────────────────────────────────────────────────
 stats_df_all <- df_summary %>%
   group_by(Group, ExperimentName, Range, Regression) %>%
@@ -41,15 +47,9 @@ stats_df_all <- df_summary %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 3) Plot
+# 3) Plot Bias differences across morph range
 # ──────────────────────────────────────────────────────────────
 p_all <- ggplot() +
-  # geom_jitter(
-  #   data = df_summary,
-  #   aes(x = factor(Range), y = mean_ACC, color = Regression),
-  #   size = 1.5, alpha = 0.5,
-  #   position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0)
-  # ) +
   geom_line(
     data = stats_df_all,
     aes(x = factor(Range), y = mean_val, group = Regression, color = Regression),
@@ -79,7 +79,7 @@ p_all <- ggplot() +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 4) Save
+# 4) Save the figure
 # ──────────────────────────────────────────────────────────────
 ggsave(
   filename = plot_path("acc_range_CP_race.png"),

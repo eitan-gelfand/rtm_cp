@@ -1,3 +1,7 @@
+# Subject-level d-prime summary plot for the younger subgroup only.
+# This figure mirrors the main d-prime histogram but restricts the sample to
+# the younger-age subset used elsewhere in the project (Age <= 42).
+#
 # ──────────────────────────────────────────────────────────────
 # Libraries
 # ──────────────────────────────────────────────────────────────
@@ -16,13 +20,13 @@ source(file.path(.root, "R/setup_fonts.R"))
 setup_fonts()
 
 # ──────────────────────────────────────────────────────────────
-# 1) Load CP Dprime dataset
+# 1) Load d-prime results with Range-level values
 # ──────────────────────────────────────────────────────────────
 df <- read.csv(data_path("dprime_results_with_range.csv"))
-# we will filter the data by Age < 42
+# Restrict to the younger subgroup used in the manuscript's age-based follow-up.
 df <- df %>% filter(Age <= 42)
 # ──────────────────────────────────────────────────────────────
-# 2) Aggregate over Range (since histogram uses subject-level)
+# 2) Aggregate over Range to obtain one value per subject x condition
 # ──────────────────────────────────────────────────────────────
 df_grouped <- df %>%
   group_by(Subject, ExperimentName, Regression) %>%
@@ -42,6 +46,8 @@ df_grouped <- df %>%
 
 # ──────────────────────────────────────────────────────────────
 # 3) Summary for plotting
+# Error bars use a within-subject Morey correction because Race and Regression
+# vary within subject whereas Group varies between subjects.
 # ──────────────────────────────────────────────────────────────
 
 # number of within-subject cells per participant:
@@ -119,7 +125,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
-# 5) Bias+ vs Bias– (paired test)
+# 5) Bias+ vs Bias- comparison within each Group x Race panel
 # ──────────────────────────────────────────────────────────────
 stat_test_reg <- df_grouped %>%
   group_by(ExperimentName, Group) %>%
@@ -147,7 +153,7 @@ stat_test_reg <- stat_test_reg %>%
   )
 
 # ──────────────────────────────────────────────────────────────
-# 6) TD vs CP comparison
+# 6) TD vs CP comparison within each Race x Bias condition
 # ──────────────────────────────────────────────────────────────
 stat_test_group <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
@@ -175,7 +181,7 @@ stat_test_group <- stat_test_group %>%
   select(-reg_index, -x_shift)
 
 # ──────────────────────────────────────────────────────────────
-# 7) Add significance brackets to final CP plot
+# 7) Add significance brackets to the final plot
 # ──────────────────────────────────────────────────────────────
 final_plot_cp <- p_cp +
   stat_pvalue_manual(
