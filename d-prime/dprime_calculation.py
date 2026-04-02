@@ -1,9 +1,15 @@
 """
 D-prime Corrected Workflow
-Combines correct D-prime calculation from final_Dpirme_CR.ipynb 
-with file I/O system from local_dprime_workflow.py
+Combines correct D-prime calculation from final_Dpirme_CR.ipynb
+with file I/O system from local_dprime_workflow.py.
 
-KEY DIFFERENCE: Uses notebook's compute_dprime_cr logic (NO .clip() on Z-scores after 0.99/0.01 correction)
+Exports three signal-detection metrics:
+- Dprime: parametric sensitivity
+- CR: parametric response criterion
+- Bprime: non-parametric response-bias index (B''D)
+
+KEY DIFFERENCE: Uses notebook's compute_dprime_cr logic
+(NO .clip() on Z-scores after 0.99/0.01 correction)
 """
 
 from pathlib import Path
@@ -223,7 +229,7 @@ def compute_dprime_cr(
     fa_count_col: str = 'ACC_len'
 ) -> pd.DataFrame:
     """
-    Computes Dprime and CR based on Hits and FA data.
+    Computes Dprime, CR, and Bprime based on Hits and FA data.
     
     **KEY DIFFERENCE FROM local_dprime_workflow.py:**
     Uses notebook's logic - NO .clip() on Z-scores after 0.99/0.01 replacement.
@@ -248,13 +254,24 @@ def compute_dprime_cr(
     df['ZHitProp'] = Z(df['HitProp'])
     df['ZFaProp'] = Z(df['FaProp'])
 
-    # Compute Dprime and CR
+    # Compute parametric sensitivity and criterion
     df['Dprime'] = df['ZHitProp'] - df['ZFaProp']
     df['CR'] = -((df['ZHitProp'] + df['ZFaProp']) / 2)
 
-    print("[INFO] Dprime and CR computed successfully.")
-    print("[INFO] Sample of Dprime and CR:")
-    print(df[['Dprime', 'CR']].head(10))
+    # Compute non-parametric response bias index B''D.
+    # This is often referred to informally as "B-prime".
+    hit_term = df['HitProp'] * (1 - df['HitProp'])
+    fa_term = df['FaProp'] * (1 - df['FaProp'])
+    denominator = hit_term + fa_term
+    df['Bprime'] = np.where(
+        denominator == 0,
+        np.nan,
+        (hit_term - fa_term) / denominator,
+    )
+
+    print("[INFO] Dprime, CR, and Bprime computed successfully.")
+    print("[INFO] Sample of SDT metrics:")
+    print(df[['Dprime', 'CR', 'Bprime']].head(10))
 
     return df
 
@@ -444,6 +461,7 @@ def run_workflow(data_file: str = DEFAULT_DATA_FILE) -> dict[str, pd.DataFrame]:
     print("\n[INFO] Generating summary plots...")
     generate_summary_plot(filtered_df, "Dprime", plot_path("Dprime_summary.png"))
     generate_summary_plot(filtered_df, "CR", plot_path("CR_summary.png"))
+    generate_summary_plot(filtered_df, "Bprime", plot_path("Bprime_summary.png"))
 
     return {
         "raw": df,
@@ -457,6 +475,5 @@ def run_workflow(data_file: str = DEFAULT_DATA_FILE) -> dict[str, pd.DataFrame]:
 
 if __name__ == "__main__":
     run_workflow()
-
 
 
