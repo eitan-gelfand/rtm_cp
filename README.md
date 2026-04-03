@@ -26,6 +26,7 @@ The repository includes:
 The manuscript contains the full theoretical and methodological interpretation. The README is intended only as a compact guide to the repository structure and execution workflow.
 
 **Manuscript Contact:** Bat-sheva Hadad - bhadad@edu.haifa.ac.il
+
 **Repository / Analysis Contact:** Eitan Gelfand - eitan.gelfand@gmail.com
 
 ---
