@@ -18,6 +18,7 @@ The repository includes:
 - d-prime / signal-detection analysis
 - trial-level GLMM analysis
 - bootstrap follow-up for peak-age estimates
+- SPSS repeated-measures ANOVA follow-up
 - histogram and range-based descriptive plots
 - RTM correlation analyses
 - updating-model analysis
@@ -75,6 +76,7 @@ Some analyses are independent, but the main derived-metric workflow is:
 - `weibull_analysis/` - subject-level psychometric fitting and Weibull-derived metrics
 - `d-prime/` - workflow for d-prime, criterion, and related summary outputs
 - `glmm_analysis/` - trial-level GLMM analysis and bootstrap follow-up
+- `SPSS/` - SPSS repeated-measures ANOVA syntax and short documentation
 - `rtm_corr/` - correlation analyses linking RTM-related measures
 - `hisotgrams/` - grouped summary plots for d-prime and PSE
 - `range_analysis/` - accuracy-by-range descriptive plots
@@ -136,6 +138,11 @@ Some analyses are independent, but the main derived-metric workflow is:
     - `output/last_trail_updating_analysis.png`
 
 ### Follow-up and descriptive analyses
+
+- `SPSS/IBM SPSS Statistics - Code.sps`
+  - SPSS repeated-measures ANOVA syntax.
+  - Use after generating the d-prime and Weibull/PSE-derived metrics.
+  - See `SPSS/SPSS_repeated_measures_ANOVA.md` for a short explanation of the model and factors.
 
 - `hisotgrams/dprime_histograms.R`
   - Subject-level d-prime grouped summaries by Group, Race, and Regression condition.
@@ -206,9 +213,15 @@ Dependency note:
 
 Run as needed:
 
+- files in `SPSS/` repeated-measures ANOVA
 - scripts in `hisotgrams/`
 - scripts in `range_analysis/`
 - scripts in `rtm_corr/`
+
+Dependency note:
+
+- The SPSS analysis should be run only after Stage 1, because it uses the derived d-prime and Weibull/PSE metrics.
+- `SPSS/IBM SPSS Statistics - Code.sps` contains the syntax, and `SPSS/SPSS_repeated_measures_ANOVA.md` gives the short explanation.
 
 These scripts are mostly parallel and can be run according to the figure or metric of interest.
 
