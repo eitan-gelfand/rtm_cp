@@ -242,7 +242,7 @@ p <- ggplot(results, aes(x = Point, y = Beta, color = Race)) +
   ) +
   geom_point(size = 2.8) +
   facet_wrap(~ Panel, nrow = 1) +
-  scale_x_discrete(labels = c("D0_tinf" = "t-∞ model", "D1_t1" = "t-1", "D1_tinf" = "t-∞")) +
+  scale_x_discrete(labels = c("D0_tinf" = "t-inf model", "D1_t1" = "t-1", "D1_tinf" = "t-inf")) +
   scale_color_manual(values = pal_race, name = "Race") +
   labs(x = NULL, y = "Beta") +
   coord_cartesian(ylim = c(-0.1, 0.55)) +
