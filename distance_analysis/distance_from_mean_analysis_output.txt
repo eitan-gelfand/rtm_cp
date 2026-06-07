@@ -1,0 +1,208 @@
+
+Distance-from-mean control analyses
+===================================
+Input file: /Users/eitas/projects/lab-galia/analysis/rtm_cp/data/updating_data_cp.csv
+Output file: /Users/eitas/projects/lab-galia/analysis/rtm_cp/distance_analysis/distance_from_mean_analysis_output.txt
+
+Trial counts before cleaning
+============================
+Total rows: 38757
+Rows with RT <= 250: 0
+Rows with missing RT: 1528
+
+Trial counts after RT cleaning
+==============================
+Total rows retained: 37229
+Same rows retained: 18609
+Different rows retained: 18620
+
+Rows by Condition x Group x Race
+# A tibble: 8 × 4
+  Condition Group ExperimentName     n
+  <fct>     <fct> <fct>          <int>
+1 Same      TD    Own-Race        6081
+2 Same      TD    Other-Race      6059
+3 Same      CP    Own-Race        3244
+4 Same      CP    Other-Race      3225
+5 Different TD    Own-Race        6089
+6 Different TD    Other-Race      6065
+7 Different CP    Own-Race        3238
+8 Different CP    Other-Race      3228
+
+
+Different-trial rows by Bias x Group x Race
+# A tibble: 8 × 4
+  Regression Group ExperimentName     n
+  <fct>      <fct> <fct>          <int>
+1 biasm      TD    Own-Race        3042
+2 biasm      TD    Other-Race      3038
+3 biasm      CP    Own-Race        1621
+4 biasm      CP    Other-Race      1613
+5 biasp      TD    Own-Race        3047
+6 biasp      TD    Other-Race      3027
+7 biasp      CP    Own-Race        1617
+8 biasp      CP    Other-Race      1615
+
+
+Distance summaries
+==================
+Same trials: F1 distance from midpoint by Group x Race
+# A tibble: 4 × 5
+  Group ExperimentName     n mean_F1_distance_50 sd_F1_distance_50
+  <fct> <fct>          <int>               <dbl>             <dbl>
+1 TD    Own-Race        6081                14.7              9.63
+2 TD    Other-Race      6059                14.7              9.64
+3 CP    Own-Race        3244                14.7              9.62
+4 CP    Other-Race      3225                14.7              9.62
+
+
+Different trials: F2 distance from midpoint by Bias x Group x Race
+# A tibble: 8 × 6
+  Regression Group ExperimentName     n mean_F2_distance_50 sd_F2_distance_50
+  <fct>      <fct> <fct>          <int>               <dbl>             <dbl>
+1 biasm      TD    Own-Race        3042                7.68              6.07
+2 biasm      TD    Other-Race      3038                7.66              6.06
+3 biasm      CP    Own-Race        1621                7.65              6.05
+4 biasm      CP    Other-Race      1613                7.67              6.06
+5 biasp      TD    Own-Race        3047               37.7               6.80
+6 biasp      TD    Other-Race      3027               37.7               6.81
+7 biasp      CP    Own-Race        1617               37.7               6.79
+8 biasp      CP    Other-Race      1615               37.7               6.80
+
+
+Point-biserial correlation: F2 distance x Bias+ indicator
+cor(F2_distance_50, Bias+ indicator) = 0.9189
+
+Same-trial model: accuracy as a function of first-face distance from midpoint
+=============================================================================
+
+Model summary
+ Family: binomial  ( probit )
+Formula:          ACC ~ F1_distance_50_c * Group * ExperimentName + Age_c + (1 |      Subject)
+Data: same_df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  19154.4   19232.7   -9567.2   19134.4     18599 
+
+Random effects:
+
+Conditional model:
+ Groups  Name        Variance Std.Dev.
+ Subject (Intercept) 0.1271   0.3565  
+Number of obs: 18609, groups:  Subject, 49
+
+Conditional model:
+                                         Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                              0.779140   0.054847  14.206  < 2e-16 ***
+F1_distance_50_c                         0.043296   0.015856   2.731  0.00632 ** 
+Group1                                   0.069821   0.054841   1.273  0.20296    
+ExperimentName1                          0.093708   0.011814   7.932 2.16e-15 ***
+Age_c                                   -0.004417   0.003156  -1.400  0.16163    
+F1_distance_50_c:Group1                  0.033210   0.015856   2.095  0.03621 *  
+F1_distance_50_c:ExperimentName1         0.003524   0.015854   0.222  0.82412    
+Group1:ExperimentName1                  -0.006694   0.011814  -0.567  0.57096    
+F1_distance_50_c:Group1:ExperimentName1  0.008263   0.015854   0.521  0.60225    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Type-III fixed-effect tests
+Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: ACC
+                                         Chisq Df Pr(>Chisq)    
+(Intercept)                           201.8040  1  < 2.2e-16 ***
+F1_distance_50_c                        7.4564  1   0.006321 ** 
+Group                                   1.6209  1   0.202963    
+ExperimentName                         62.9124  1  2.161e-15 ***
+Age_c                                   1.9589  1   0.161631    
+F1_distance_50_c:Group                  4.3870  1   0.036215 *  
+F1_distance_50_c:ExperimentName         0.0494  1   0.824119    
+Group:ExperimentName                    0.3211  1   0.570962    
+F1_distance_50_c:Group:ExperimentName   0.2716  1   0.602248    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Different-trial model: Bias effect while controlling second-face distance from midpoint
+=======================================================================================
+
+Model summary
+ Family: binomial  ( probit )
+Formula:          ACC ~ Range_c + Regression * Group * ExperimentName + F2_distance_50_c +  
+    Age_c + (1 | Subject)
+Data: different_df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  19860.2   19954.2   -9918.1   19836.2     18608 
+
+Random effects:
+
+Conditional model:
+ Groups  Name        Variance Std.Dev.
+ Subject (Intercept) 0.1097   0.3312  
+Number of obs: 18620, groups:  Subject, 49
+
+Conditional model:
+                                    Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                        -0.227171   0.053002   -4.29 1.82e-05 ***
+Range_c                             0.848064   0.017696   47.92  < 2e-16 ***
+Regression1                        -0.107736   0.025164   -4.28 1.86e-05 ***
+Group1                              0.047238   0.050864    0.93  0.35304    
+ExperimentName1                     0.054089   0.010759    5.03 4.97e-07 ***
+F2_distance_50_c                    0.013856   0.022626    0.61  0.54029    
+Age_c                              -0.009899   0.002940   -3.37  0.00076 ***
+Regression1:Group1                 -0.031893   0.010758   -2.96  0.00303 ** 
+Regression1:ExperimentName1         0.005353   0.010754    0.50  0.61863    
+Group1:ExperimentName1             -0.010028   0.010757   -0.93  0.35119    
+Regression1:Group1:ExperimentName1  0.021009   0.010754    1.95  0.05074 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Type-III fixed-effect tests
+Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: ACC
+                                    Chisq Df Pr(>Chisq)    
+(Intercept)                       18.3702  1  1.819e-05 ***
+Range_c                         2296.6709  1  < 2.2e-16 ***
+Regression                        18.3299  1  1.858e-05 ***
+Group                              0.8625  1  0.3530380    
+ExperimentName                    25.2743  1  4.973e-07 ***
+F2_distance_50_c                   0.3750  1  0.5402858    
+Age_c                             11.3366  1  0.0007599 ***
+Regression:Group                   8.7880  1  0.0030322 ** 
+Regression:ExperimentName          0.2478  1  0.6186327    
+Group:ExperimentName               0.8692  1  0.3511865    
+Regression:Group:ExperimentName    3.8169  1  0.0507395 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Estimated Bias contrasts from different-trial model
+===================================================
+Bias+ vs Bias- within Group x Race, controlling Range, F2 distance, and Age.
+Group = TD, ExperimentName = Own-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.227 0.0581 Inf  -3.902 <0.0001
+
+Group = CP, ExperimentName = Own-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.183 0.0670 Inf  -2.733  0.0063
+
+Group = TD, ExperimentName = Other-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.332 0.0581 Inf  -5.717 <0.0001
+
+Group = CP, ExperimentName = Other-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.120 0.0668 Inf  -1.803  0.0714
+
+Note: contrasts are still on the probit scale. Consider using
+      regrid() if you want contrasts of back-transformed estimates. 
+
+
+Done
+====
+Analysis complete.
