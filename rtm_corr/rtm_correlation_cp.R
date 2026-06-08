@@ -112,6 +112,33 @@ corr_stats <- df_corr %>%
 print(corr_stats)
 
 # ---------------------------------------------------------
+# Fisher r-to-z test: TD vs CP correlation difference
+# ---------------------------------------------------------
+fisher_group_tests <- corr_stats %>%
+  select(ExperimentName, Group, n, r) %>%
+  pivot_wider(
+    names_from = Group,
+    values_from = c(n, r),
+    names_sep = "_"
+  ) %>%
+  mutate(
+    z = (atanh(r_TD) - atanh(r_CP)) / sqrt(1 / (n_TD - 3) + 1 / (n_CP - 3)),
+    p = 2 * pnorm(-abs(z))
+  ) %>%
+  select(
+    ExperimentName,
+    TD_r = r_TD,
+    TD_n = n_TD,
+    CP_r = r_CP,
+    CP_n = n_CP,
+    z,
+    p
+  )
+
+cat("\nFisher r-to-z test: TD vs CP correlation difference\n")
+print(fisher_group_tests)
+
+# ---------------------------------------------------------
 # 5) Annotation positions — fixed top-left per panel
 # ---------------------------------------------------------
 corr_stats_plot <- corr_stats %>%

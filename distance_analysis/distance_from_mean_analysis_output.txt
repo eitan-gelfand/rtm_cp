@@ -78,7 +78,8 @@ Same-trial model: accuracy as a function of first-face distance from midpoint
 
 Model summary
  Family: binomial  ( probit )
-Formula:          ACC ~ F1_distance_50_c * Group * ExperimentName + Age_c + (1 |      Subject)
+Formula:          
+ACC ~ F1_distance_50_c * Group * ExperimentName + Age_c + (1 |      Subject)
 Data: same_df
 
       AIC       BIC    logLik -2*log(L)  df.resid 
@@ -92,16 +93,26 @@ Conditional model:
 Number of obs: 18609, groups:  Subject, 49
 
 Conditional model:
-                                         Estimate Std. Error z value Pr(>|z|)    
-(Intercept)                              0.779140   0.054847  14.206  < 2e-16 ***
-F1_distance_50_c                         0.043296   0.015856   2.731  0.00632 ** 
-Group1                                   0.069821   0.054841   1.273  0.20296    
-ExperimentName1                          0.093708   0.011814   7.932 2.16e-15 ***
-Age_c                                   -0.004417   0.003156  -1.400  0.16163    
-F1_distance_50_c:Group1                  0.033210   0.015856   2.095  0.03621 *  
-F1_distance_50_c:ExperimentName1         0.003524   0.015854   0.222  0.82412    
-Group1:ExperimentName1                  -0.006694   0.011814  -0.567  0.57096    
-F1_distance_50_c:Group1:ExperimentName1  0.008263   0.015854   0.521  0.60225    
+                                         Estimate Std. Error z value Pr(>|z|)
+(Intercept)                              0.779140   0.054847  14.206  < 2e-16
+F1_distance_50_c                         0.043296   0.015856   2.731  0.00632
+Group1                                   0.069821   0.054841   1.273  0.20296
+ExperimentName1                          0.093708   0.011814   7.932 2.16e-15
+Age_c                                   -0.004417   0.003156  -1.400  0.16163
+F1_distance_50_c:Group1                  0.033210   0.015856   2.095  0.03621
+F1_distance_50_c:ExperimentName1         0.003524   0.015854   0.222  0.82412
+Group1:ExperimentName1                  -0.006694   0.011814  -0.567  0.57096
+F1_distance_50_c:Group1:ExperimentName1  0.008263   0.015854   0.521  0.60225
+                                           
+(Intercept)                             ***
+F1_distance_50_c                        ** 
+Group1                                     
+ExperimentName1                         ***
+Age_c                                      
+F1_distance_50_c:Group1                 *  
+F1_distance_50_c:ExperimentName1           
+Group1:ExperimentName1                     
+F1_distance_50_c:Group1:ExperimentName1    
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
@@ -124,12 +135,68 @@ F1_distance_50_c:Group:ExperimentName   0.2716  1   0.602248
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 
+Different-trial base model: Bias effect without second-face distance control
+============================================================================
+
+Model summary
+ Family: binomial  ( probit )
+Formula:          
+ACC ~ Range_c + Regression * Group * ExperimentName + Age_c +  
+    (1 | Subject)
+Data: different_df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  19858.6   19944.7   -9918.3   19836.6     18609 
+
+Random effects:
+
+Conditional model:
+ Groups  Name        Variance Std.Dev.
+ Subject (Intercept) 0.1097   0.3311  
+Number of obs: 18620, groups:  Subject, 49
+
+Conditional model:
+                                    Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                        -0.223670   0.052692   -4.24 2.19e-05 ***
+Range_c                             0.848119   0.017692   47.94  < 2e-16 ***
+Regression1                        -0.121666   0.010768  -11.30  < 2e-16 ***
+Group1                              0.047179   0.050861    0.93 0.353614    
+ExperimentName1                     0.054091   0.010758    5.03 4.96e-07 ***
+Age_c                              -0.009895   0.002940   -3.37 0.000763 ***
+Regression1:Group1                 -0.031795   0.010756   -2.96 0.003117 ** 
+Regression1:ExperimentName1         0.005447   0.010752    0.51 0.612432    
+Group1:ExperimentName1             -0.009970   0.010755   -0.93 0.353953    
+Regression1:Group1:ExperimentName1  0.020986   0.010753    1.95 0.050977 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+Type-III fixed-effect tests
+Analysis of Deviance Table (Type III Wald chisquare tests)
+
+Response: ACC
+                                    Chisq Df Pr(>Chisq)    
+(Intercept)                       18.0186  1  2.188e-05 ***
+Range_c                         2297.9346  1  < 2.2e-16 ***
+Regression                       127.6628  1  < 2.2e-16 ***
+Group                              0.8604  1  0.3536143    
+ExperimentName                    25.2802  1  4.958e-07 ***
+Age_c                             11.3284  1  0.0007633 ***
+Regression:Group                   8.7378  1  0.0031168 ** 
+Regression:ExperimentName          0.2566  1  0.6124321    
+Group:ExperimentName               0.8592  1  0.3539535    
+Regression:Group:ExperimentName    3.8090  1  0.0509774 .  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
 Different-trial model: Bias effect while controlling second-face distance from midpoint
 =======================================================================================
 
 Model summary
  Family: binomial  ( probit )
-Formula:          ACC ~ Range_c + Regression * Group * ExperimentName + F2_distance_50_c +  
+Formula:          
+ACC ~ Range_c + Regression * Group * ExperimentName + F2_distance_50_c +  
     Age_c + (1 | Subject)
 Data: different_df
 
@@ -180,8 +247,31 @@ Regression:Group:ExperimentName    3.8169  1  0.0507395 .
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 
-Estimated Bias contrasts from different-trial model
-===================================================
+Estimated Bias contrasts from different-trial base model
+========================================================
+Bias+ vs Bias- within Group x Race, controlling Range and Age.
+Group = TD, ExperimentName = Own-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.254 0.0367 Inf  -6.914 <0.0001
+
+Group = CP, ExperimentName = Own-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.211 0.0492 Inf  -4.286 <0.0001
+
+Group = TD, ExperimentName = Other-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.360 0.0362 Inf  -9.933 <0.0001
+
+Group = CP, ExperimentName = Other-Race:
+ contrast      estimate     SE  df z.ratio p.value
+ biasm - biasp   -0.149 0.0482 Inf  -3.084  0.0020
+
+Note: contrasts are still on the probit scale. Consider using
+      regrid() if you want contrasts of back-transformed estimates. 
+
+
+Estimated Bias contrasts from different-trial control model
+===========================================================
 Bias+ vs Bias- within Group x Race, controlling Range, F2 distance, and Age.
 Group = TD, ExperimentName = Own-Race:
  contrast      estimate     SE  df z.ratio p.value

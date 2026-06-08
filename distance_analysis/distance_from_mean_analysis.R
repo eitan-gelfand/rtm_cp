@@ -14,7 +14,7 @@ suppressPackageStartupMessages({
 source(file.path(.root, "R/paths.R"))
 
 output_file <- file.path(.PROJECT_ROOT, "distance_analysis", "distance_from_mean_analysis_output.txt")
-if (file.exists(output_file)) file.remove(output_file)
+if (file.exists(output_file)) invisible(file.remove(output_file))
 
 write_report <- function(...) {
   text <- paste(..., sep = "")
@@ -145,7 +145,13 @@ same_model <- glmmTMB(
   family = binomial(link = "probit")
 )
 
-different_model <- glmmTMB(
+different_model_base <- glmmTMB(
+  ACC ~ Range_c + Regression * Group * ExperimentName + Age_c + (1 | Subject),
+  data = different_df,
+  family = binomial(link = "probit")
+)
+
+different_model_control <- glmmTMB(
   ACC ~ Range_c + Regression * Group * ExperimentName + F2_distance_50_c + Age_c + (1 | Subject),
   data = different_df,
   family = binomial(link = "probit")
@@ -157,14 +163,25 @@ print_model_summary(
 )
 
 print_model_summary(
-  different_model,
+  different_model_base,
+  "Different-trial base model: Bias effect without second-face distance control"
+)
+
+print_model_summary(
+  different_model_control,
   "Different-trial model: Bias effect while controlling second-face distance from midpoint"
 )
 
-write_section("Estimated Bias contrasts from different-trial model")
+write_section("Estimated Bias contrasts from different-trial base model")
+write_report("Bias+ vs Bias- within Group x Race, controlling Range and Age.")
+write_block(
+  pairs(emmeans(different_model_base, ~ Regression | Group * ExperimentName))
+)
+
+write_section("Estimated Bias contrasts from different-trial control model")
 write_report("Bias+ vs Bias- within Group x Race, controlling Range, F2 distance, and Age.")
 write_block(
-  pairs(emmeans(different_model, ~ Regression | Group * ExperimentName))
+  pairs(emmeans(different_model_control, ~ Regression | Group * ExperimentName))
 )
 
 write_section("Done")
