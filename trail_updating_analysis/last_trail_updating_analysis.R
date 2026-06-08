@@ -10,6 +10,7 @@
 # lower- and higher-performing controls.
 
 library(lme4)
+library(glmmTMB)
 library(ggplot2)
 library(dplyr)
 
@@ -198,6 +199,38 @@ data <- subset(
   data,
   Range > 0 & !is.na(ACC) & !is.na(New_t1) & !is.na(New_tinf) & !is.na(Subject)
 )
+
+data$Subject <- factor(data$Subject)
+data$Group <- factor(data$Group, levels = c("TD", "CP"))
+data$ExperimentName <- factor(data$ExperimentName, levels = c("Caucasian", "Asian"))
+data$UpdatingGroup <- dplyr::case_when(
+  data$Group == "TD" & data$CFMTgroup == "L" ~ "TD_L",
+  data$Group == "TD" & data$CFMTgroup == "H" ~ "TD_H",
+  data$Group == "CP" ~ "CP",
+  TRUE ~ NA_character_
+)
+data$UpdatingGroup <- factor(data$UpdatingGroup, levels = c("TD_L", "TD_H", "CP"))
+
+data$c_New_tinf <- center_scale(data$New_tinf)
+data$c_New_t1 <- center_scale(data$New_t1)
+data$c_Range <- center_scale(data$Range)
+
+cat("\nFitting full updating interaction model with glmmTMB...\n")
+flush.console()
+updating_interaction_model <- glmmTMB(
+  ACC ~ c_Range +
+    c_New_tinf * UpdatingGroup * ExperimentName +
+    c_New_t1 * UpdatingGroup * ExperimentName +
+    (1 | Subject),
+  data = data,
+  family = binomial(link = "probit")
+)
+
+cat("\n==============================\n")
+cat("Full updating interaction model by TD CFMT group and CP (glmmTMB)\n")
+cat("==============================\n")
+cat(capture.output(summary(updating_interaction_model)), sep = "\n")
+cat("\n")
 
 # Analysis cells follow the manuscript comparison:
 # TD split by CFMT level (L/H), CP kept as one group.
