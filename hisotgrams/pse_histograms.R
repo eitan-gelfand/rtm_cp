@@ -81,6 +81,7 @@ within_offset_step <- 0.03 * y_range
 between_offset_base <- 0.10 * y_range
 between_offset_step <- 0.03 * y_range
 dodge_width <- 0.8
+bar_width <- 0.7
 n_reg <- nlevels(df_grouped$Regression)
 group_levels <- levels(df_grouped$Group)
 x_td <- which(group_levels == "TD")
@@ -93,7 +94,8 @@ x_cp <- which(group_levels == "CP")
 p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
   geom_col(
     aes(fill = Regression),
-    position = position_dodge(width = 0.8),
+    position = position_dodge(width = dodge_width),
+    width = bar_width,
     color = "black"
   ) +
   geom_errorbar(
@@ -103,7 +105,7 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanPSE)) +
       group = Regression
     ),
     width    = 0.2,
-    position = position_dodge(0.8)
+    position = position_dodge(width = dodge_width)
   ) +
   facet_wrap(
     ~ ExperimentName,
@@ -131,7 +133,7 @@ stat_test_reg <- df_grouped %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
   filter(p.signif != "ns") %>%
-  add_xy_position(x = "Group", dodge = 0.8)
+  add_xy_position(x = "Group", dodge = dodge_width)
 
 reg_base_y <- df_summary %>%
   group_by(ExperimentName, Group) %>%
@@ -159,7 +161,7 @@ stat_test_group <- df_grouped %>%
   add_significance("p") %>%
   mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
   filter(p.signif != "ns") %>%
-  add_xy_position(x = "Group", dodge = 0.8)
+  add_xy_position(x = "Group", dodge = dodge_width)
 
 group_base_y <- df_summary %>%
   group_by(ExperimentName, Regression) %>%

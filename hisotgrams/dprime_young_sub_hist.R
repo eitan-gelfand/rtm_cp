@@ -77,13 +77,18 @@ df_summary <- df_grouped_ws %>%
     .groups    = "drop"
   )
 
-y_range <- diff(range(df_summary$meanDprime, na.rm = TRUE))
+y_range <- diff(range(
+  df_grouped$Dprime,
+  df_summary$meanDprime + df_summary$seDprime,
+  na.rm = TRUE
+))
 if (!is.finite(y_range) || y_range <= 0) y_range <- 1
 
 within_offset_step <- 0.03 * y_range
 between_offset_base <- 0.10 * y_range
 between_offset_step <- 0.03 * y_range
 dodge_width <- 0.8
+bar_width <- 0.65
 n_reg <- nlevels(df_grouped$Regression)
 group_levels <- levels(df_grouped$Group)
 x_td <- which(group_levels == "TD")
@@ -96,8 +101,10 @@ x_cp <- which(group_levels == "CP")
 p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
   geom_col(
     aes(fill = Regression),
-    position = position_dodge(width = 0.8),
-    color = "black"
+    position = position_dodge(width = dodge_width),
+    width = bar_width,
+    color = "black",
+    alpha = 0.35
   ) +
   geom_errorbar(
     aes(
@@ -106,7 +113,19 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
       group = Regression
     ),
     width    = 0.2,
-    position = position_dodge(0.8)
+    position = position_dodge(dodge_width)
+  ) +
+  geom_point(
+    data = df_grouped,
+    aes(x = Group, y = Dprime, color = Regression, group = Regression),
+    position = position_jitterdodge(
+      jitter.width = 0.12,
+      jitter.height = 0,
+      dodge.width = dodge_width
+    ),
+    size = 1.5,
+    alpha = 0.65,
+    show.legend = FALSE
   ) +
   facet_wrap(
     ~ ExperimentName,
@@ -121,7 +140,15 @@ p_cp <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
     values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),
     labels = c("biasp" = "Bias+", "biasm" = "Bias-")
   ) +
-  scale_y_continuous(labels = number_format(accuracy = 0.01)) +
+  scale_color_manual(
+    values = c("biasp" = "#7FB3D5", "biasm" = "#F08080"),
+    labels = c("biasp" = "Bias+", "biasm" = "Bias-")
+  ) +
+  scale_y_continuous(
+    labels = number_format(accuracy = 0.01),
+    limits = c(0, NA),
+    expand = expansion(mult = c(0, 0.05))
+  ) +
   theme_pub()
 
 # ──────────────────────────────────────────────────────────────
@@ -136,18 +163,17 @@ stat_test_reg <- df_grouped %>%
   filter(p.signif != "ns") %>%
   add_xy_position(x = "Group", dodge = 0.8)
 
-reg_base_y <- df_summary %>%
+reg_base_y <- df_grouped %>%
   group_by(ExperimentName, Group) %>%
   summarize(
-    reg_base = max(meanDprime + seDprime, na.rm = TRUE),
-    reg_se_top = max(seDprime, na.rm = TRUE),
+    reg_base = max(Dprime, na.rm = TRUE),
     .groups = "drop"
   )
 
 stat_test_reg <- stat_test_reg %>%
   left_join(reg_base_y, by = c("ExperimentName", "Group")) %>%
   mutate(
-    within_gap = pmax(0.02 * y_range, 0.35 * reg_se_top),
+    within_gap = 0.05 * y_range,
     y.position = reg_base + within_gap +
       (as.numeric(Group) - 1) * within_offset_step
   )
@@ -164,9 +190,9 @@ stat_test_group <- df_grouped %>%
   filter(p.signif != "ns") %>%
   add_xy_position(x = "Group", dodge = 0.8)
 
-group_base_y <- df_summary %>%
+group_base_y <- df_grouped %>%
   group_by(ExperimentName, Regression) %>%
-  summarize(group_base = max(meanDprime + seDprime, na.rm = TRUE), .groups = "drop")
+  summarize(group_base = max(Dprime, na.rm = TRUE), .groups = "drop")
 
 stat_test_group <- stat_test_group %>%
   left_join(group_base_y, by = c("ExperimentName", "Regression")) %>%
@@ -187,16 +213,16 @@ final_plot_cp <- p_cp +
   stat_pvalue_manual(
     stat_test_reg,
     label        = "p.signif",
-    bracket.size = 0.8,
+    bracket.size = 0.5,
     tip.length   = 0.01,
-    size         = 6
+    size         = 5
   ) +
   stat_pvalue_manual(
     stat_test_group,
     label        = "p.signif",
-    bracket.size = 0.8,
+    bracket.size = 0.5,
     tip.length   = 0.01,
-    size         = 6
+    size         = 5
   )
 
 if (interactive()) {

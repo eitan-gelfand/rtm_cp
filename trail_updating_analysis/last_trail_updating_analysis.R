@@ -217,6 +217,8 @@ data$c_Range <- center_scale(data$Range)
 
 cat("\nFitting full updating interaction model with glmmTMB...\n")
 flush.console()
+
+options(contrasts = c("contr.treatment", "contr.poly"))
 updating_interaction_model <- glmmTMB(
   ACC ~ c_Range +
     c_New_tinf * UpdatingGroup * ExperimentName +
