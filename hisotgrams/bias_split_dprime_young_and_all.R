@@ -1,4 +1,4 @@
-# D-prime histogram for Bias- trials in young and full samples.
+# D-prime histogram for Bias- and Bias+ trials in young and full samples.
 # Input metric: Dprime from dprime_results_with_range.csv.
 # Output plot: output/plots/biasm_dprime_young_and_all.png
 
@@ -16,26 +16,32 @@ setup_fonts()
 
 df <- read.csv(data_path("dprime_results_with_range.csv"))
 
-df_biasm <- df %>%
+df_bias <- df %>%
   mutate(
-    Regression = recode(Regression, "biasM" = "biasm", "biasP" = "biasp")
-  ) %>%
-  filter(Regression == "biasm")
+    Regression = recode(Regression, "biasM" = "biasm", "biasP" = "biasp"),
+    Regression = factor(Regression, levels = c("biasm", "biasp")),
+    BiasLabel = recode(
+      as.character(Regression),
+      "biasm" = "Bias- trials",
+      "biasp" = "Bias+ trials"
+    ),
+    BiasLabel = factor(BiasLabel, levels = c("Bias- trials", "Bias+ trials"))
+  )
 
 df_plot_source <- bind_rows(
-  df_biasm %>%
+  df_bias %>%
     filter(Age <= 42) %>%
     mutate(Sample = "Young (Age <= 42)"),
-  df_biasm %>%
+  df_bias %>%
     mutate(Sample = "All ages")
 ) %>%
   mutate(
     Sample = factor(Sample, levels = c("Young (Age <= 42)", "All ages"))
   )
 
-# Average over Range to obtain one value per subject x race x sample.
+# Average over Range to obtain one value per subject x bias x race x sample.
 df_grouped <- df_plot_source %>%
-  group_by(Sample, Subject, ExperimentName) %>%
+  group_by(Sample, BiasLabel, Regression, Subject, ExperimentName) %>%
   summarize(
     Dprime = mean(Dprime, na.rm = TRUE),
     Age = first(Age),
@@ -48,21 +54,21 @@ df_grouped <- df_plot_source %>%
   )
 
 # Race is a within-subject factor and Group is between-subject, so error bars
-# use within-subject normalization separately inside each Sample x Group cell.
+# use within-subject normalization separately inside each Sample x Bias x Group cell.
 k_within <- nlevels(df_grouped$ExperimentName)
 morey_correction <- sqrt(k_within / (k_within - 1))
 
 df_grouped_ws <- df_grouped %>%
-  group_by(Sample, Group, Subject) %>%
+  group_by(Sample, BiasLabel, Group, Subject) %>%
   mutate(subject_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
-  group_by(Sample, Group) %>%
+  group_by(Sample, BiasLabel, Group) %>%
   mutate(group_grand_mean = mean(Dprime, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(Dprime_norm = Dprime - subject_mean + group_grand_mean)
 
 df_summary <- df_grouped_ws %>%
-  group_by(Sample, Group, ExperimentName) %>%
+  group_by(Sample, BiasLabel, Group, ExperimentName) %>%
   summarize(
     meanDprime = mean(Dprime, na.rm = TRUE),
     sd_norm = sd(Dprime_norm, na.rm = TRUE),
@@ -90,8 +96,8 @@ p <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
     width = 0.2,
     position = position_dodge(dodge_width)
   ) +
-  facet_wrap(~ Sample, nrow = 1) +
-  labs(x = "Group", y = "D-prime (Bias- trials)") +
+  facet_grid(BiasLabel ~ Sample) +
+  labs(x = "Group", y = "D-prime") +
   scale_fill_manual(
     name = "Race",
     values = c("Caucasian" = "#A6D8C3", "Asian" = "#F6B48F"),
@@ -104,28 +110,27 @@ p <- ggplot(df_summary, aes(x = Group, y = meanDprime)) +
   ) +
   theme_pub()
 
-# Paired race comparisons within each sample x group.
+# Paired race comparisons within each sample x bias x group.
 stat_test_race_all <- df_grouped %>%
-  group_by(Sample, Group) %>%
+  group_by(Sample, BiasLabel, Group) %>%
   t_test(Dprime ~ ExperimentName, paired = TRUE) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance("p.adj") %>%
-  mutate(p.signif = ifelse(nchar(p.adj.signif) > 3, "***", p.adj.signif)) %>%
+  add_significance("p") %>%
+  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif)) %>%
   add_xy_position(x = "Group", dodge = dodge_width)
 
 race_base_y <- df_summary %>%
-  group_by(Sample, Group) %>%
+  group_by(Sample, BiasLabel, Group) %>%
   summarize(y.position = max(meanDprime + seDprime, na.rm = TRUE) + 0.08,
             .groups = "drop")
 
 stat_test_race_all <- stat_test_race_all %>%
   select(-y.position) %>%
-  left_join(race_base_y, by = c("Sample", "Group"))
+  left_join(race_base_y, by = c("Sample", "BiasLabel", "Group"))
 
-cat("\nPaired race comparisons within each sample x group:\n")
+cat("\nPaired race comparisons within each sample x bias x group:\n")
 print(
   stat_test_race_all %>%
-    select(Sample, Group, group1, group2, n1, n2, statistic, df, p, p.adj, p.signif),
+    select(Sample, BiasLabel, Group, group1, group2, n1, n2, statistic, df, p, p.signif),
   n = Inf,
   width = Inf
 )
@@ -133,25 +138,61 @@ print(
 stat_test_race <- stat_test_race_all %>%
   filter(p.signif != "ns")
 
-# Independent TD vs CP comparisons within each sample x race.
+# Independent TD vs CP comparisons within each sample x bias x race.
 stat_test_group <- df_grouped %>%
-  group_by(Sample, ExperimentName) %>%
+  group_by(Sample, BiasLabel, ExperimentName) %>%
   t_test(Dprime ~ Group, paired = FALSE) %>%
-  adjust_pvalue(method = "bonferroni") %>%
-  add_significance("p.adj") %>%
-  mutate(p.signif = ifelse(nchar(p.adj.signif) > 3, "***", p.adj.signif))
+  add_significance("p") %>%
+  mutate(p.signif = ifelse(nchar(p.signif) > 3, "***", p.signif))
 
-cat("\nIndependent TD vs CP comparisons within each sample x race:\n")
+facet_y <- df_summary %>%
+  group_by(Sample, BiasLabel) %>%
+  summarize(
+    facet_top = max(meanDprime + seDprime, na.rm = TRUE),
+    facet_range = diff(range(meanDprime + seDprime, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(facet_range = if_else(is.finite(facet_range) & facet_range > 0, facet_range, 1))
+
+group_base_y <- df_summary %>%
+  group_by(Sample, BiasLabel, ExperimentName) %>%
+  summarize(group_base = max(meanDprime + seDprime, na.rm = TRUE), .groups = "drop")
+
+stat_test_group <- stat_test_group %>%
+  left_join(facet_y, by = c("Sample", "BiasLabel")) %>%
+  left_join(group_base_y, by = c("Sample", "BiasLabel", "ExperimentName")) %>%
+  mutate(
+    race_index = as.numeric(ExperimentName),
+    x_shift = (race_index - (nlevels(ExperimentName) + 1) / 2) *
+      (dodge_width / nlevels(ExperimentName)),
+    xmin = as.numeric(factor(group1, levels = levels(df_grouped$Group))) + x_shift,
+    xmax = as.numeric(factor(group2, levels = levels(df_grouped$Group))) + x_shift,
+    y.position = pmax(group_base, facet_top) + 0.16 * facet_range +
+      (race_index - 1) * 0.08 * facet_range
+  ) %>%
+  select(-facet_top, -facet_range, -group_base, -race_index, -x_shift)
+
+cat("\nIndependent TD vs CP comparisons within each sample x bias x race:\n")
 print(
   stat_test_group %>%
-    select(Sample, ExperimentName, group1, group2, n1, n2, statistic, df, p, p.adj, p.signif),
+    select(Sample, BiasLabel, ExperimentName, group1, group2, n1, n2, statistic, df, p, p.signif),
   n = Inf,
   width = Inf
 )
 
+stat_test_group <- stat_test_group %>%
+  filter(p.signif != "ns")
+
 final_plot <- p +
   stat_pvalue_manual(
     stat_test_race,
+    label = "p.signif",
+    bracket.size = 0.6,
+    tip.length = 0.01,
+    size = 5
+  ) +
+  stat_pvalue_manual(
+    stat_test_group,
     label = "p.signif",
     bracket.size = 0.6,
     tip.length = 0.01,
@@ -163,10 +204,10 @@ if (interactive()) {
 }
 
 ggsave(
-  plot_path("biasm_dprime_young_and_all.png"),
+  plot_path("bias_split_dprime_young_and_all.png"),
   final_plot,
   width = 9,
-  height = 5.5,
+  height = 8.5,
   dpi = 300,
   device = ragg::agg_png
 )
