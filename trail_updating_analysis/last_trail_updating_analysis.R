@@ -13,6 +13,7 @@ library(lme4)
 library(glmmTMB)
 library(ggplot2)
 library(dplyr)
+library(emmeans)
 
 .root <- if (file.exists("R/paths.R")) "." else ".."
 source(file.path(.root, "R/paths.R"))
@@ -232,6 +233,43 @@ cat("\n==============================\n")
 cat("Full updating interaction model by TD CFMT group and CP (glmmTMB)\n")
 cat("==============================\n")
 cat(capture.output(summary(updating_interaction_model)), sep = "\n")
+cat("\n")
+
+cat("\n==============================\n")
+cat("Simple effects: CP vs TD groups within race for beta t-inf\n")
+cat("==============================\n")
+tinf_group_by_race <- emtrends(
+  updating_interaction_model,
+  ~ UpdatingGroup | ExperimentName,
+  var = "c_New_tinf"
+)
+tinf_cp_contrasts <- contrast(
+  tinf_group_by_race,
+  method = list(
+    "CP - TD_low" = c(-1, 0, 1),
+    "CP - TD_high" = c(0, -1, 1)
+  ),
+  adjust = "none"
+)
+print(tinf_cp_contrasts)
+
+cat("\n==============================\n")
+cat("Simple effects: CP vs TD groups within race for beta t1\n")
+cat("==============================\n")
+t1_group_by_race <- emtrends(
+  updating_interaction_model,
+  ~ UpdatingGroup | ExperimentName,
+  var = "c_New_t1"
+)
+t1_cp_contrasts <- contrast(
+  t1_group_by_race,
+  method = list(
+    "CP - TD_low" = c(-1, 0, 1),
+    "CP - TD_high" = c(0, -1, 1)
+  ),
+  adjust = "none"
+)
+print(t1_cp_contrasts)
 cat("\n")
 
 # Analysis cells follow the manuscript comparison:
