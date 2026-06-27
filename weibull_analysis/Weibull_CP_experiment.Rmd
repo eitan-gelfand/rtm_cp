@@ -27,6 +27,11 @@ df <- read.csv(data_path("full_data_cp.csv"))
 # we will remove range = 0 because it's undifeined in the function
 # remove subject 829, 1704, 1700
 data <- filter(df, Range != 0, !Subject %in% c(829, 1704, 1700))
+
+# remove subject due to bad wiebul fit
+data <- filter(data, !Subject %in% c(920, 1705))
+
+
 data$ACC <- pmin(pmax(data$ACC, 1e-4), 1 - 1e-4)
 
 fit_curve <- function(.data) {
@@ -129,6 +134,35 @@ data_params2 <- data_predictions |>
 
  write.csv(data_predictions, data_path("weibull_trial_predictions.csv"))
  write.csv(data_params2, data_path("weibull_metric_results.csv"))
+
+
+ # Flag bad Weibull fits
+data_params2_flagged <- data_params2 |>
+  mutate(
+    bad_weibull_fit =
+      is.na(slope) |
+      is.na(k) |
+      is.na(lambda) |
+      k < 0.2 |
+      lambda < 1 |
+      lambda > 100
+  )
+
+
+# Save flagged table
+write.csv(
+  data_params2_flagged,
+  data_path("weibull_metric_results_validation_flagged.csv"),
+  row.names = FALSE
+)
+#save only flaged rows only bad weibull fits
+write.csv( 
+  data_params2_flagged |> filter(bad_weibull_fit),
+  data_path("weibull_metric_results_validation_flagged_only.csv"),
+  row.names = FALSE
+)
+
+
 ```
 
 # -----------------------------
